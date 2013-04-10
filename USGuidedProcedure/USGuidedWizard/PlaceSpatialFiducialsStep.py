@@ -2,6 +2,9 @@ from __main__ import qt, ctk
 
 from USGuidedStep import *
 from Helper import *
+from FiducialsList import *
+
+import os
 
 class PlaceSpatialFiducialsStep( USGuidedStep ) :
 
@@ -31,14 +34,12 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
 #    self.__layout.addWidget(loadTrackerListButton)
 #    loadTrackerListButton.connect('clicked(bool)', self.onLoadSpatialPointsListClicked)
 
-    # UI   from QtDesigner  -----------------------------------------------------------------------------
-    f = qt.QFile('C:/Program Files/Slicer 4.2.0-2013-02-13/bin/Python/USGuidedWizard/fiducials.ui')
-    f.open(qt.QFile.ReadOnly)
-    loader = qt.QUiLoader()
-    self.fiducialsWidget = loader.load(f)
-    f.close()
-    self.__layout.addWidget(self.fiducialsWidget)
 
+    self.fiducialsList = FiducialsList()
+    self.fiducialsList.setModuleLogic(self.logic)
+    self.__layout.addWidget(self.fiducialsList.getFiducialsWidget())
+    self.fiducialsWidget = self.fiducialsList.getFiducialsWidget()
+    
     #customize the UI
     self.fiducialsWidget.placeSpatialButton.setVisible(True)
     self.fiducialsWidget.placeFiducialButton.setVisible(False)
@@ -76,31 +77,44 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
     print("We are in the onEntry function of PlaceSpatialFiducialsStep coming from:" )
     print comingFrom.name()
     qt.QTimer.singleShot(0, self.killButton)
-
-    #After the connection is necessary to add models and transforms that will be used during navigation
-    referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
-    slicer.mrmlScene.AddNode(referenceToRASNode)
-    referenceToRASNode.SetName("ReferenceToRAS")
+    
+    
+    referenceToRASNode=slicer.util.getNode("ReferenceToRAS")    
+    if referenceToRASNode==None:
+        #After the connection is necessary to add models and transforms that will be used during navigation
+        referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
+        slicer.mrmlScene.AddNode(referenceToRASNode)
+        referenceToRASNode.SetName("ReferenceToRAS")
+         
+         
     imageReferenceNode=slicer.util.getNode("Image_Reference")
     imageReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
-    #Add the stylus model
-    modelsModule=slicer.modules.models
-    modelsModuleLogic=modelsModule.logic()
-    modelsModuleLogic.SetMRMLScene(slicer.mrmlScene)
-    modelsModuleLogic.AddModel("C:/Program Files/Slicer 4.2.0-2013-02-13/bin/Python/USGuidedWizard/Stylus_Example.stl")
-    stylusModelNode=slicer.util.getNode("Stylus_Example")
-    matrix=vtk.vtkMatrix4x4()
-    matrix.SetElement(0,3,-210)
-    stylusTipToStylusTipModel=slicer.vtkMRMLLinearTransformNode()
-    slicer.mrmlScene.AddNode(stylusTipToStylusTipModel)
-    stylusTipToStylusTipModel.SetAndObserveMatrixTransformToParent(matrix)
-    stylusTipToStylusTipModel.SetName("StylusTipToStylusTipModel")
-    stylusModelNode.SetAndObserveTransformNodeID(stylusTipToStylusTipModel.GetID())
-    ## Associate the model of the stylus with the stylus tip transforms
-    stylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
-    stylusTipToStylusTipModel.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
-    ## Associate the stylus to reference tranform with the reference to RAS
-    stylusTipToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
+        
+        
+     
+    stylusModelNode=slicer.util.getNode("Stylus_Example")    
+    if stylusModelNode==None:    
+        #Add the stylus model
+        modelsModule=slicer.modules.models
+        modelsModuleLogic=modelsModule.logic()
+        modelsModuleLogic.SetMRMLScene(slicer.mrmlScene)
+        path=slicer.modules.usguidedprocedure.path
+        modulePath=os.path.dirname(path)
+        stylusModelFile=os.path.join(modulePath,"USGuidedWizard/Stylus_Example.stl")
+        modelsModuleLogic.AddModel(stylusModelFile)
+        stylusModelNode=slicer.util.getNode("Stylus_Example")
+        matrix=vtk.vtkMatrix4x4()
+        matrix.SetElement(0,3,-210)
+        stylusTipToStylusTipModelTransform=slicer.vtkMRMLLinearTransformNode()
+        slicer.mrmlScene.AddNode(stylusTipToStylusTipModelTransform)
+        stylusTipToStylusTipModelTransform.SetAndObserveMatrixTransformToParent(matrix)
+        stylusTipToStylusTipModelTransform.SetName("StylusTipToStylusTipModel")
+        stylusModelNode.SetAndObserveTransformNodeID(stylusTipToStylusTipModelTransform.GetID())
+        ## Associate the model of the stylus with the stylus tip transforms
+        stylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
+        stylusTipToStylusTipModelTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
+        ## Associate the stylus to reference tranform with the reference to RAS
+        stylusTipToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
 
   def onExit(self, goingTo, transitionType):
     self.doStepProcessing()
@@ -109,7 +123,8 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
 
   def updateWidgetFromParameters(self, parameterNode):
     print("We are in the place fiducials step")
-    self.updateFiducialsList()
+    self.fiducialsList.updateSpatialFiducialsList()
+    #self.updateTrackerPointsList()
     
 
 
@@ -136,7 +151,7 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
       return
 
     currentRow = self.fiducialsWidget.fiducialsList.currentRow()
-    print currentRow
+    print("Current row is: " + str(currentRow))
 
     # TODO uncomment this line and comment all the following TODO
     self.logic.recordTrackerPosition()
@@ -155,7 +170,7 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
     #dummy=fidNode.GetFiducialCoordinates(fidPos)
     fidName = fidNode.GetName()
     fidID = fidNode.GetID()
-
+    
     #trackerNode=slicer.vtkMRMLAnnotationFiducialNode()
     #trackerNode.SetFiducialWorldCoordinates(fidPos)
     #trackerNode.SetName(fidName + '-Tracker')	
@@ -179,69 +194,6 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
     self.fiducialsWidget.fiducialsList.item(currentRow, 3).setText(trackerNode.GetName())
     self.fiducialsWidget.fiducialsList.item(currentRow, 4).setText(trackerNode.GetID())
     self.fiducialsWidget.fiducialsList.item(currentRow, 0).setCheckState(2)
-
-
-
-  def updateFiducialsList(self):
-    #clear list
-    #self.fiducialsWidget.fiducialsList.clear()
-
-    #raise this flag to ignore change events in the table, the flag is lowered at the end of this method
-    self.updatingList = True
-
-    # populate the list
-    fiducialListNode=slicer.util.getNode("Fiducials List")
-    print 'updateFiducialsList'
-    print fiducialListNode.GetNumberOfChildrenNodes()
-    self.fiducialsWidget.fiducialsList.setRowCount(fiducialListNode.GetNumberOfChildrenNodes())
-
-    item = qt.QTableWidgetItem('dummy')
-    for childrenIndex in xrange(fiducialListNode.GetNumberOfChildrenNodes()):
-        fidHierarchyNode=fiducialListNode.GetNthChildNode(childrenIndex)
-        fidNode=fidHierarchyNode.GetAssociatedNode()
-        if not fidNode:
-          print 'Fid node nulo'
-          continue
-
-        fidPos=[0,0,0]
-        dummy=fidNode.GetFiducialCoordinates(fidPos)
-        fidName = fidNode.GetName()
-        fidID = fidNode.GetID()
-  #          print childrenIndex
-  #          print fidID , "  -  ",  fidName,  "  ------>  " ,  fidPos[0], ",", fidPos[1], ",", fidPos[2]
-
-        #create the items for the cells
-        self.fiducialsWidget.fiducialsList.setItem(childrenIndex,0,item.clone())
-        self.fiducialsWidget.fiducialsList.setItem(childrenIndex,1,item.clone())
-        self.fiducialsWidget.fiducialsList.setItem(childrenIndex,2,item.clone())
-        self.fiducialsWidget.fiducialsList.setItem(childrenIndex,3,item.clone())
-        self.fiducialsWidget.fiducialsList.setItem(childrenIndex,4,item.clone())
-
-        # put the values in the items          
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 0).setText(fidName)
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 1).setText(fidPos)
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 2).setText(fidID)
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 3).setText('')
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 4).setText('')
-
-        #restrict edition to the names (AG: no encontr los textos de los flags en el qt module
-        # flags of the cells
-        #Qt::NoItemFlags	0	It does not have any properties set.
-        #Qt::ItemIsSelectable	1	It can be selected.
-        #Qt::ItemIsEditable	2	It can be edited.
-        #Qt::ItemIsDragEnabled	4	It can be dragged.
-        #Qt::ItemIsDropEnabled	8	It can be used as a drop target.
-        #Qt::ItemIsUserCheckable	16	It can be checked or unchecked by the user.
-        #Qt::ItemIsEnabled	32	The user can interact with the item.
-        #Qt::ItemIsTristate	64	The item is checkable with three separate states.
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 0).setFlags( 1 | 16 | 32)  # name is selectable and  not editable and user checkable
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 1).setFlags(32)  #position is not selectable and not editable 
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 2).setFlags(0)  #ID is disabled (final version should hide this column)
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 3).setFlags(32)  #ID is disabled (final version should hide this column)
-        self.fiducialsWidget.fiducialsList.item(childrenIndex, 4).setFlags(0)  #ID is disabled (final version should hide this column)
-
-
-    self.updatingList = False
 
 
   def updateTrackerPointsList(self):

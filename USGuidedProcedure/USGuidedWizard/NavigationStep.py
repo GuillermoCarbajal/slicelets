@@ -9,7 +9,7 @@ class NavigationStep( USGuidedStep ) :
     self.initialize( stepid )
     self.setName( '5. Navigation' )
     self.setDescription( 'Navigation step' )
-
+   
     self.__parent = super( NavigationStep, self )
 
   def createUserInterface( self ):

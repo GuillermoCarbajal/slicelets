@@ -73,6 +73,7 @@ class Helper( object ):
     '''
     '''
     steps = [None, # 0
+             'LoadScene',
              'ConnectToTracker',
 	     'PlaceImageFiducials',
 	     'PlaceSpatialFiducials',

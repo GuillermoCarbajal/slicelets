@@ -2,7 +2,7 @@ import os
 import unittest
 import math
 from __main__ import vtk, qt, ctk, slicer
-
+from ModelsViewer import *
 #
 # USGuidedProcedure
 #
@@ -22,7 +22,7 @@ class USGuidedProcedure:
     This file was originally developed by Jim Miller, GE and was partially funded by NIH grant U54EB005149.
 """ # replace with organization, grant and thanks.
     self.parent = parent
-
+    
     # Add this test to the SelfTest module's list for discovery when the module
     # is created.  Since this module may be discovered before SelfTests itself,
     # create the list if it doesn't already exist.
@@ -237,7 +237,8 @@ class USGuidedProcedureLogic:
   requiring an instance of the Widget
   """
   def __init__(self):
-    self.createRegistrationLists()
+    #self.createRegistrationLists()
+    self.connectorNode = None 
     pass
 
   def hasImageData(self,volumeNode):
@@ -253,14 +254,22 @@ class USGuidedProcedureLogic:
       return False
     return True
 
+  
+  def CreateAndAssociateConectorNodeWithScene(self):
+    cn=slicer.util.getNode('Plus Server Connection')  
+    if cn == None:
+       cn=slicer.vtkMRMLIGTLConnectorNode()
+       slicer.mrmlScene.AddNode(cn)
+       cn.SetName('Plus Server Connection')
+       print("IGTL Connector node was created!")
+    self.connectorNode = cn
+       
   def Connect(self):
-    cn=slicer.vtkMRMLIGTLConnectorNode()
-    slicer.mrmlScene.AddNode(cn)
-    cn.SetName('Plus Server Connection')
-    cn.SetTypeClient("localhost",18944)
-    cn.Start()
+    self.connectorNode.SetTypeClient("localhost",18944)
+    print("Status before start(): " + str(self.connectorNode.GetState()))
+    self.connectorNode.Start()
     print("Connected with Plus Server in Slicelet Class ")
-    print("Passed ")
+    print("Status after start(): " + str(self.connectorNode.GetState()))
     
     stylusTipToReference=slicer.vtkMRMLLinearTransformNode()
     slicer.mrmlScene.AddNode(stylusTipToReference)
@@ -269,6 +278,15 @@ class USGuidedProcedureLogic:
     probeToReference=slicer.vtkMRMLLinearTransformNode()
     slicer.mrmlScene.AddNode(probeToReference)
     probeToReference.SetName("ProbeToReference")
+  
+  def Disconnect(self):
+    self.connectorNode.Stop()  
+    
+  def getConnectorNode(self): 
+      return self.connectorNode
+       
+  def getConnectionStatus(self):
+      return self.connectionStatus
     
   def changeMousePlacingState(self):
     print("Place fiducial pressed")
@@ -318,7 +336,7 @@ class USGuidedProcedureLogic:
   #  saml.SetActiveHierarchyNodeID(fidListHierarchyNode.GetID())
   #  print("Registration list created")
     
-  def printFids():
+  def printFids(self):
     fiducialListNode=slicer.util.getNode("Fiducials List")
     for childrenIndex in xrange(fiducialListNode.GetNumberOfChildrenNodes()):
       fidHierarchyNode=fiducialListNode.GetNthChildNode(childrenIndex)
@@ -450,7 +468,6 @@ class USGuidedProcedureLogic:
     usn=slicer.modules.ultrasoundsnapshots
     usnl=usn.logic()
     usnl.AddSnapshot(image_RAS)
-    
       
   def recordTrackerPosition(self):
     print("Tracker position recorded")
@@ -460,7 +477,7 @@ class USGuidedProcedureLogic:
     StylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
     cfl=slicer.modules.collectfiducials.logic()
     cfl.SetProbeTransformNode(StylusTipToReferenceNode)
-    cfl.AddFiducial()    
+    cfl.AddFiducial()      
 
 class USGuidedProcedureTest(unittest.TestCase):
   """
@@ -756,8 +773,8 @@ class Slicelet(object):
     
 
     # TODO: should have way to pop up python interactor
-    self.buttons = qt.QFrame()
-    self.buttons.setLayout( qt.QVBoxLayout() )
+    self.leftFrame = qt.QFrame(self.parent)
+    self.leftFrame.setLayout( qt.QVBoxLayout() )
     
     #self.parent.setStyleSheet(
     #"QFrame{background: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #eef, stop: 1 #ccf); background-color: qlineargradient(spread:pad, x1:0.989, y1:0.012, x2:0, y2:0, stop:0 rgba(223, 227, 255, 255), stop:0.494318 rgba(164, 157, 194, 255), stop:1 rgba(115, 115, 115, 255));}"
@@ -772,17 +789,17 @@ class Slicelet(object):
     #    "QSlider::add-page:horizontal:disabled {background: #eee;border-color: #999;}"
     #    "QSlider::handle:horizontal:disabled {background: #eee;border: 1px solid #aaa;border-radius: 4px;}")
     
-    self.parent.layout().addWidget(self.buttons)
+    self.parent.layout().addWidget(self.leftFrame)
     self.addDataButton = qt.QPushButton("Add Data")
-    self.buttons.layout().addWidget(self.addDataButton)
+    self.leftFrame.layout().addWidget(self.addDataButton)
     self.addDataButton.connect("clicked()",slicer.app.ioManager().openAddDataDialog)
     self.loadSceneButton = qt.QPushButton("Load Scene")
-    self.buttons.layout().addWidget(self.loadSceneButton)
+    self.leftFrame.layout().addWidget(self.loadSceneButton)
     self.loadSceneButton.connect("clicked()",slicer.app.ioManager().openLoadSceneDialog)
     
     self.layoutSelectorFrame2 = qt.QFrame(self.parent)
     self.layoutSelectorFrame2.setLayout(qt.QHBoxLayout())
-    self.buttons.layout().addWidget(self.layoutSelectorFrame2)
+    self.leftFrame.layout().addWidget(self.layoutSelectorFrame2)
 
     self.layoutSelectorLabel2 = qt.QLabel("Layout Selector: ", self.layoutSelectorFrame2)
     self.layoutSelectorLabel2.setToolTip( "Select the layout ...")
@@ -810,22 +827,30 @@ class Slicelet(object):
     self.parent.layout().addWidget(self.layoutManager)
     
     
-    
-    
-    
+    print("Previous line of the Constructor of ModelsViewer")
+    self.modelsViewer = ModelsViewer()
+    self.modelsViewer.setModuleLogic(self.moduleLogic)
+    self.modelsViewer.listenToScene()
+    #item=qt.QListWidgetItem("unItem")
+    #self.modelsViewer.addItem(item)
+    self.leftFrame.layout().addWidget(self.modelsViewer.getListWidget())
     '''
     Create and start the USGuided workflow.
     '''
     self.workflow = ctk.ctkWorkflow()
 
-    workflowWidget = ctk.ctkWorkflowStackedWidget()
-    workflowWidget.setWorkflow( self.workflow )
+    self.workflowWidget = ctk.ctkWorkflowTabWidget()
+    self.workflowWidget.setWorkflow( self.workflow )
 
-    workflowWidget.buttonBoxWidget().nextButtonDefaultText = ""
-    workflowWidget.buttonBoxWidget().backButtonDefaultText = ""
+    self.workflowWidget.buttonBoxWidget().nextButtonDefaultText = ""
+    self.workflowWidget.buttonBoxWidget().backButtonDefaultText = ""
+    
+    self.leftFrame.layout().addWidget( self.workflowWidget )
     
     # create all wizard steps
-    self.connectToTrackerStep =  USGuidedWizard.ConnectToTrackerStep( 'ConnectToTracker'  )
+    self.loadSceneStep = USGuidedWizard.LoadSceneStep('LoadScene')
+    self.loadSceneStep.setModuleLogic(self.moduleLogic)
+    self.connectToTrackerStep =  USGuidedWizard.ConnectToTrackerStep('ConnectToTracker')
     self.connectToTrackerStep.setModuleLogic(self.moduleLogic)
     self.placeImageFiducialsStep =  USGuidedWizard.PlaceImageFiducialsStep( 'PlaceImageFiducials')
     self.placeImageFiducialsStep.setModuleLogic(self.moduleLogic)
@@ -845,6 +870,7 @@ class Slicelet(object):
     # add the wizard steps to an array for convenience
     allSteps = []
 
+    allSteps.append( self.loadSceneStep )
     allSteps.append( self.connectToTrackerStep )
     allSteps.append( self.placeImageFiducialsStep )
     allSteps.append( self.placeSpatialFiducialsStep )
@@ -857,6 +883,7 @@ class Slicelet(object):
     #allSteps.append( self.reportROIStep )
 
     # Add transition for the first step which let's the user choose between simple and advanced mode
+    self.workflow.addTransition( self.loadSceneStep, self.connectToTrackerStep )
     self.workflow.addTransition( self.connectToTrackerStep, self.placeImageFiducialsStep )
     self.workflow.addTransition( self.placeImageFiducialsStep, self.placeSpatialFiducialsStep )
     self.workflow.addTransition( self.placeSpatialFiducialsStep, self.registrationStep )
@@ -889,6 +916,8 @@ class Slicelet(object):
     currentStep = self.parameterNode.GetParameter('currentStep')
     if currentStep != '':
       print 'Restoring workflow step to ', currentStep
+      if currentStep == 'LoadScene':
+        self.workflow.setInitialStep(self.loadSceneStep)
       if currentStep == 'ConnectToTracker':
         self.workflow.setInitialStep(self.connectToTrackerStep)
       if currentStep == 'PlaceImageFiducials':
@@ -914,16 +943,7 @@ class Slicelet(object):
         
     # start the workflow and show the widget
     self.workflow.start()
-    workflowWidget.visible = True
-    self.buttons.layout().addWidget( workflowWidget )
-    
-    
-    
-    
-    
-    
-    
-    
+    self.workflowWidget.visible = True
     
     
     if widgetClass:
@@ -931,7 +951,6 @@ class Slicelet(object):
       self.widget.setup()
     self.parent.show()
     
-
     #self.moduleLogic = slicer.modules.USGuidedProcedure.logic()
     
   def onPlusServerConnection(self):
@@ -950,6 +969,7 @@ class Slicelet(object):
     elif argin==3:
        self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutDual3DView )
    
+      
  
  
 class USGuidedSliceletTestSlicelet(Slicelet):

@@ -2,9 +2,9 @@ from __main__ import qt, ctk
 
 class USGuidedStep( ctk.ctkWorkflowWidgetStep ) :
 
-  def __init__( self, stepid ):
+  def __init__( self, stepid):
     self.initialize( stepid )
-
+    
   def setParameterNode(self, parameterNode):
     '''
     Keep the pointer to the parameter node for each step
@@ -20,14 +20,15 @@ class USGuidedStep( ctk.ctkWorkflowWidgetStep ) :
     boldFont = qt.QFont( "Sans Serif", 12, qt.QFont.Bold )
     return boldFont
 
-  def createUserInterface( self ):
+  def createUserInterface( self):
     #self.__layout = qt.QFormLayout( self )
     #self.__layout.setVerticalSpacing( 5 )
 
     # Add empty rows
     #self.__layout.addRow( "", qt.QWidget() )
     #self.__layout.addRow( "", qt.QWidget() )
-    self.__layout = qt.QVBoxLayout( self )
+    self.setLayout(qt.QVBoxLayout())
+    self.__layout = self.layout()
     
     return self.__layout
 
