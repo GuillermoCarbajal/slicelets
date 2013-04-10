@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PropertiesMenu</class>
+ <widget class="QDockWidget" name="PropertiesMenu">
+  <property name="windowModality">
+   <enum>Qt::ApplicationModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>199</width>
+    <height>221</height>
+   </rect>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+
+#m_ControlGroup_2{
+background: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #eef, stop: 1 #ccf);
+	background-color: qlineargradient(spread:pad, x1:0.989, y1:0.012, x2:0, y2:0, stop:0 rgba(223, 227, 255, 255), stop:0.494318 rgba(164, 157, 194, 255), stop:1 rgba(115, 115, 115, 255));
+}
+#m_ActionTabWidget{
+background-color: yellow; /*rgb(214, 214, 214);*/
+}
+
+QGroupBox{
+max-width: 300px;
+min-width: 20px;
+}
+
+QPushButton:hover {
+	
+    color: red;
+    font-weight: bold;
+   border-width: 4px;
+
+    
+}
+
+QPushButton {
+color: white;
+background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #88d, stop: 0.1 #99e, stop: 0.49 #77c, stop: 0.5 #66b, stop: 1 #77c);
+border-width: 1px;
+border-color: #339;
+border-style: solid;
+border-radius: 7;
+padding: 3px;
+font-size: 12px;
+font-weight: bold;
+padding-left: 5px;
+padding-right: 5px;
+min-width: 20px;
+max-width: 150px;
+min-height: 20px;
+max-height: 40px;
+
+}
+/*slider --------------------------------------------*/
+
+QSlider::groove:horizontal {
+border: 1px solid #bbb;
+background: white;
+height: 10px;
+border-radius: 4px;
+}
+
+QSlider::sub-page:horizontal {
+background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,
+    stop: 0 #66e, stop: 1 #bbf);
+background: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 1,
+    stop: 0 #bbf, stop: 1 #55f);
+border: 1px solid #777;
+height: 10px;
+border-radius: 4px;
+}
+
+QSlider::add-page:horizontal {
+background: #fff;
+border: 1px solid #777;
+height: 10px;
+border-radius: 4px;
+}
+
+QSlider::handle:horizontal {
+background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 #eee, stop:1 #ccc);
+border: 1px solid #777;
+width: 13px;
+margin-top: -2px;
+margin-bottom: -2px;
+border-radius: 4px;
+}
+
+QSlider::handle:horizontal:hover {
+background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 #fff, stop:1 #ddd);
+border: 1px solid #444;
+border-radius: 4px;
+}
+
+QSlider::sub-page:horizontal:disabled {
+background: #bbb;
+border-color: #999;
+}
+
+QSlider::add-page:horizontal:disabled {
+background: #eee;
+border-color: #999;
+}
+
+QSlider::handle:horizontal:disabled {
+background: #eee;
+border: 1px solid #aaa;
+border-radius: 4px;
+}
+
+/*-----------vertical slider ----------------*/
+
+QSlider::groove:vertical {
+border: 1px solid #bbb;
+background: white;
+width: 8px;
+border-radius: 4px;
+
+}
+
+QSlider::sub-page:vertical {
+background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,
+    stop: 0 #66e, stop: 1 #bbf);
+background: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 1,
+    stop: 0 #bbf, stop: 1 #55f);
+border: 1px solid #777;
+width: 20px;
+border-radius: 4px;
+}
+
+QSlider::add-page:vertical {
+background: #fff;
+border: 1px solid #777;
+width: 20px;
+border-radius: 4px;
+}
+
+QSlider::handle:vertical {
+background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 #eee, stop:1 #ccc);
+border: 1px solid #777;
+width: 25px;
+margin-right: -2px;
+margin-left: -2px;
+border-radius: 4px; 
+}
+
+QSlider::handle:vertical:hover {
+background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 #fff, stop:1 #ddd);
+border: 1px solid #444;
+border-radius: 4px;
+}
+
+QSlider::sub-page:vertical:disabled {
+background: #bbb;
+border-color: #999;
+}
+
+QSlider::add-page:vertical:disabled {
+background: #eee;
+border-color: #999;
+}
+
+QSlider::handle:vertical:disabled {
+background: #eee;
+border: 1px solid #aaa;
+border-radius: 4px;
+}
+
+/*-------------COMBO BOX-------------------*/
+
+
+
+QComboBox{
+color: white;
+background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #88d, stop: 0.1 #99e, stop: 0.49 #77c, stop: 0.5 #66b, stop: 1 #77c);
+border-width: 1px;
+border-color: #339;
+border-style: solid;
+border-radius: 7;
+padding: 3px;
+font-size: 12px;
+font-weight: bold;
+padding-left: 5px;
+padding-right: 5px;
+/*min-width: 50px;*/
+max-width: 150px;
+/*min-height: 13px;*/
+max-height: 150px;
+}
+
+
+/*------------------------TAB WIDGET-------------------------------*/
+QTabWidget{
+
+}
+QTabWidget::pane { /* The tab widget frame */
+border-color: #339;
+border-style: solid;
+border-radius: 7;
+border-width: 2px;
+border-top: 2px solid #C2C7CB;
+
+
+ }
+
+ QTabWidget::tab-bar {
+     left: 5px; /* move to the right by 5px */
+ }
+
+ /* Style the tab using the tab sub-control. Note that
+     it reads QTabBar _not_ QTabWidget */
+QTabBar::tab {
+color: white;
+background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #88d,   		stop: 0.1 #99e, stop: 0.49 #77c, stop: 0.5 #66b, stop: 1 #77c);
+border-width: 1px;
+border-color: #339;
+border-style: solid;
+border-radius: 7;
+padding: 3px;
+font-size: 12px;
+font-weight: bold;
+padding-left: 5px;
+padding-right: 5px;
+width:55; 
+/*min-width: 20px;*/
+/*max-width: 200px;*/
+min-height: 20px;
+max-height: 40px;
+ }
+
+ QTabBar::tab:!selected {
+background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #888,   		stop: 0.1 #999, stop: 0.49 #777, stop: 0.5 #666, stop: 1 #777);
+
+/*     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #fafafa, stop: 0.4 #f4f4f4,
+                                 stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);*/
+ }
+
+/*-------------------------------TEXT BROWSER------------------------------------*/
+
+QTextBrowser {
+border-color: #339;
+border-style: solid;
+border-radius: 7;
+background-color:none
+/*border-top: 2px solid #C2C7CB;*/
+ }</string>
+  </property>
+  <property name="floating">
+   <bool>true</bool>
+  </property>
+  <property name="windowTitle">
+   <string>Propiedades</string>
+  </property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QTableWidget" name="m_PropertiesList">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="autoScroll">
+       <bool>false</bool>
+      </property>
+      <property name="cornerButtonEnabled">
+       <bool>false</bool>
+      </property>
+      <property name="rowCount">
+       <number>4</number>
+      </property>
+      <property name="columnCount">
+       <number>1</number>
+      </property>
+      <row>
+       <property name="text">
+        <string>Visible 2D</string>
+       </property>
+      </row>
+      <row>
+       <property name="text">
+        <string>Visible 3D</string>
+       </property>
+      </row>
+      <row>
+       <property name="text">
+        <string>Color</string>
+       </property>
+      </row>
+      <row>
+       <property name="text">
+        <string>Opacity</string>
+       </property>
+      </row>
+      <column>
+       <property name="text">
+        <string>Value</string>
+       </property>
+      </column>
+      <item row="0" column="0">
+       <property name="text">
+        <string/>
+       </property>
+      </item>
+      <item row="2" column="0">
+       <property name="text">
+        <string> ...</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <layoutdefault spacing="6" margin="9"/>
+ <resources/>
+ <connections/>
+</ui>
