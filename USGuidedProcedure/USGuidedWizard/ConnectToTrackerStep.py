@@ -90,7 +90,7 @@ class ConnectToTrackerStep( USGuidedStep ) :
         self.estado = "Waiting"
     elif status==0:
         self.estado=="Disconnected"
-        self.PlusServerConnection.setText("Connected")
+        self.PlusServerConnection.setText("Connect")
     
     self.statusBar.showMessage(self.estado)#print(self.estado)
           

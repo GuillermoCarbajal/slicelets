@@ -71,10 +71,10 @@ class ModelsViewer():
                         node=slicer.util.getNode(node.GetName())
                         node=slicer.vtkMRMLModelNode.SafeDownCast(node)
                         displayNode=node.GetDisplayNode()
-                        print("Info of added node:")
-                        print displayNode.GetName()
-                        print displayNode.GetColor()
-                        print displayNode.GetOpacity()
+                        #print("Info of added node:")
+                        #print displayNode.GetName()
+                        #print displayNode.GetColor()
+                        #print displayNode.GetOpacity()
     
         
     def addItem(self,item):
@@ -90,7 +90,7 @@ class ModelsViewer():
         self.propertiesMenu.meshOpacitySlider.setValue(currentOpacity*100)
         isVisible=self.currentDisplayNode.GetVisibility()
         self.propertiesMenu.checkBoxVisible3D.setCheckState(isVisible)
-        print item.text()
+        #print item.text()
         self.propertiesMenu.show()
         
     def onColorButtonClicked(self):
@@ -109,9 +109,9 @@ class ModelsViewer():
     def onSliderMoved(self,opacity):
         # Get the current display node
         print("Slider movement captured!")
-        print opacity
+        #print opacity
         self.currentDisplayNode.SetOpacity(float(opacity)/100)
         
     def onVisible3DChanged(self,isVisible):
-        print isVisible
+        #print isVisible
         self.currentDisplayNode.SetVisibility(isVisible)

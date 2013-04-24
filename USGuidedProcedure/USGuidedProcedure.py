@@ -239,6 +239,7 @@ class USGuidedProcedureLogic:
   def __init__(self):
     #self.createRegistrationLists()
     self.connectorNode = None 
+    self.numberOfUltrasoundSnapshotsTaken=0
     pass
 
   def hasImageData(self,volumeNode):
@@ -451,9 +452,11 @@ class USGuidedProcedureLogic:
     redNode=slicer.vtkMRMLSliceNode.SafeDownCast(redNode)
     vrd=slicer.modules.volumereslicedriver
     vrdl=vrd.logic()
+    vrdl.SetMRMLScene(slicer.mrmlScene)
     vrdl.SetDriverForSlice(image_RAS.GetID(),redNode)
-    vrdl.SetOrientationForSlice(3,redNode)
-    vrdl.SetMethodForSlice(2,redNode)
+    vrdl.SetModeForSlice(vrdl.MODE_TRANSVERSE180,redNode)
+    #vrdl.SetOrientationForSlice(3,redNode)
+    #vrdl.SetMethodForSlice(2,redNode)
 	
   def showStylusTipToRAS(self):
     stylusTipToRAS=slicer.util.getNode("StylusTipToRAS")
@@ -468,7 +471,96 @@ class USGuidedProcedureLogic:
     usn=slicer.modules.ultrasoundsnapshots
     usnl=usn.logic()
     usnl.AddSnapshot(image_RAS)
+    
+  def takeUSSnapshot2(self):
+    snapshotDisp=slicer.vtkMRMLModelDisplayNode()
+    slicer.mrmlScene.AddNode(snapshotDisp)
+    snapshotDisp.SetScene(slicer.mrmlScene)
+    snapshotDisp.SetDisableModifiedEvent(1)
+    snapshotDisp.SetOpacity(1.0)
+    snapshotDisp.SetColor(1.0,1.0,1.0)
+    snapshotDisp.SetAmbient(1.0)
+    snapshotDisp.SetBackfaceCulling(0)
+    snapshotDisp.SetDiffuse(0)
+    snapshotDisp.SetSaveWithScene(0)
+    snapshotDisp.SetDisableModifiedEvent(0)
+    name="Snapshot" + str(self.numberOfUltrasoundSnapshotsTaken)  
+    self.numberOfUltrasoundSnapshotsTaken = self.numberOfUltrasoundSnapshotsTaken + 1
+    
+    snapshotModel=slicer.vtkMRMLModelNode()
+    snapshotModel.SetName(name)
+    snapshotModel.SetDescription("Live Ultrasound Snapshot")
+    snapshotModel.SetScene(slicer.mrmlScene)
+    snapshotModel.SetAndObserveDisplayNodeID(snapshotDisp.GetID())
+    snapshotModel.SetHideFromEditors(0)
+    snapshotModel.SetSaveWithScene(0)
+    slicer.mrmlScene.AddNode(snapshotModel)
+    
+    image_RAS=slicer.util.getNode("Image_Reference")
+    
+    dim=[0,0,0]
+    imageData=image_RAS.GetImageData()
+    imageData.GetDimensions(dim)
+    
+    plane=vtk.vtkPlaneSource()
+    plane.Update()
+    snapshotModel.SetAndObservePolyData(plane.GetOutput())
+    
+    slicePolyData=snapshotModel.GetPolyData()
+    slicePoints=slicePolyData.GetPoints()
+    
+    # In parent transform is saved the ReferenceToRAS transform
+    parentTransform=vtk.vtkTransform()
+    parentTransform.Identity()
+    if image_RAS.GetParentTransformNode() is not None:
+      parentMatrix=vtk.vtkMatrix4x4()
+      parentTransformNode=image_RAS.GetParentTransformNode()
+      parentTransformNode.GetMatrixTransformToWorld(parentMatrix)
+      aux=parentTransform.GetMatrix()
+      aux.DeepCopy(parentMatrix)
+      parentTransform.Update()
       
+    inImageTransform=vtk.vtkTransform()
+    inImageTransform.Identity()
+    image_RAS.GetIJKToRASMatrix(inImageTransform.GetMatrix())
+    
+    tImageToRAS=vtk.vtkTransform()
+    tImageToRAS.Identity()
+    tImageToRAS.PostMultiply()
+    tImageToRAS.Concatenate(inImageTransform)
+    tImageToRAS.Concatenate(parentTransform)
+   
+    tImageToRAS.Update()
+    
+    point1Image=[0.0,0.0,0.0,1.0]
+    point2Image=[dim[0],0.0,0.0,1.0]
+    point3Image=[0.0,dim[1],0.0,1.0]
+    point4Image=[dim[0],dim[1],0.0,1.0]
+    
+    point1RAS=[0.0,0.0,0.0,0.0]
+    point2RAS=[0.0,0.0,0.0,0.0]
+    point3RAS=[0.0,0.0,0.0,0.0]
+    point4RAS=[0.0,0.0,0.0,0.0]
+    tImageToRAS.MultiplyPoint(point1Image,point1RAS)
+    tImageToRAS.MultiplyPoint(point2Image,point2RAS)
+    tImageToRAS.MultiplyPoint(point3Image,point3RAS)
+    tImageToRAS.MultiplyPoint(point4Image,point4RAS)  
+    
+    p1RAS=[point1RAS[0],point1RAS[1],point1RAS[2]]
+    p2RAS=[point2RAS[0],point2RAS[1],point2RAS[2]]
+    p3RAS=[point3RAS[0],point3RAS[1],point3RAS[2]]
+    p4RAS=[point4RAS[0],point4RAS[1],point4RAS[2]]
+    slicePoints.SetPoint(0,p1RAS)
+    slicePoints.SetPoint(1,p2RAS)
+    slicePoints.SetPoint(2,p3RAS)
+    slicePoints.SetPoint(3,p4RAS)
+    ## Add image texture.
+    image=vtk.vtkImageData()
+    image.DeepCopy(imageData)
+    modelDisplayNode=snapshotModel.GetModelDisplayNode()
+    modelDisplayNode.SetAndObserveTextureImageData(image)
+    
+    
   def recordTrackerPosition(self):
     print("Tracker position recorded")
     saml = slicer.modules.annotations.logic() 
@@ -478,6 +570,21 @@ class USGuidedProcedureLogic:
     cfl=slicer.modules.collectfiducials.logic()
     cfl.SetProbeTransformNode(StylusTipToReferenceNode)
     cfl.AddFiducial()      
+    
+  def startVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode,OutputVolFilename,OutputVolDeviceName):
+    igtlRemoteLogic.SendCommand('<Command Name="StartVolumeReconstruction" OutputVolFilename="'+OutputVolFilename+'" OutputVolDeviceName="'+OutputVolDeviceName +'" TrackedVideoDeviceId="TrackedVideoDevice"></Command>',igtlConnectorNode.GetID()) 
+  
+  def suspendVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode): 
+    igtlRemoteLogic.SendCommand('<Command Name="SuspendVolumeReconstruction"></Command>',igtlConnectorNode.GetID())  
+    
+  def resumeVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode): 
+    igtlRemoteLogic.SendCommand('<Command Name="ResumeVolumeReconstruction"></Command>',igtlConnectorNode.GetID())   
+    
+  def stopVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode): 
+    igtlRemoteLogic.SendCommand('<Command Name="StopVolumeReconstruction"></Command>',igtlConnectorNode.GetID())   
+  
+  def getVolumeReconstructionSnapshot(self,igtlRemoteLogic,igtlConnectorNode): 
+    igtlRemoteLogic.SendCommand('<Command Name="GetVolumeReconstructionSnapshot"></Command>',igtlConnectorNode.GetID())           
 
 class USGuidedProcedureTest(unittest.TestCase):
   """
@@ -841,6 +948,9 @@ class Slicelet(object):
 
     self.workflowWidget = ctk.ctkWorkflowTabWidget()
     self.workflowWidget.setWorkflow( self.workflow )
+    
+    bw=self.workflowWidget.buttonBoxWidget()
+    bw.hideInvalidButtons=True
 
     self.workflowWidget.buttonBoxWidget().nextButtonDefaultText = ""
     self.workflowWidget.buttonBoxWidget().backButtonDefaultText = ""

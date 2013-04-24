@@ -241,26 +241,31 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
     fiducialListNodeForRegistration=slicer.util.getNode("Fiducials List (for registration)")
     trackerListNodeForRegistration=slicer.util.getNode("Tracker Points List (for registration)")
 
+
+    
     # clear the lists (for registration)
     fiducialListNodeForRegistration.RemoveChildrenNodes()
     trackerListNodeForRegistration.RemoveChildrenNodes()
     
     saml=slicer.modules.annotations.logic()
+    
+   
     for row in range(self.fiducialsWidget.fiducialsList.rowCount):
       fidID = self.fiducialsWidget.fiducialsList.item(row, 2).text()
       trackerID = self.fiducialsWidget.fiducialsList.item(row, 4).text()
-      print row
-      print fidID
-      print trackerID
+      #print row
+      #print fidID
+      #print trackerID
       
       fidNode = slicer.mrmlScene.GetNodeByID(fidID)
       trackerNode = slicer.mrmlScene.GetNodeByID(trackerID)
-      print fidNode
-      print trackerNode
+      #print fidNode
+      #print trackerNode
       
       #if the row is selected to be used in the registration
       if self.fiducialsWidget.fiducialsList.item(row, 0).checkState()==2:
-        print 'Checked row'
+        #print 'Checked row'
+     
         fidPos=[0,0,0]
         dummy=fidNode.GetFiducialCoordinates(fidPos)
         fidName = fidNode.GetName()
@@ -281,3 +286,4 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
         slicer.mrmlScene.AddNode(fidNodeForRegistration)
         saml.SetActiveHierarchyNodeID(trackerListNodeForRegistration.GetID())
         slicer.mrmlScene.AddNode(trackerNodeForRegistration)
+        
