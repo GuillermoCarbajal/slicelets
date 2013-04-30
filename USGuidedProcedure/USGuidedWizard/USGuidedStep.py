@@ -2,7 +2,7 @@ from __main__ import qt, ctk
 
 class USGuidedStep( ctk.ctkWorkflowWidgetStep ) :
 
-  def __init__( self, stepid):
+  def __init__( self, stepid): 
     self.initialize( stepid )
     
   def setParameterNode(self, parameterNode):
@@ -29,6 +29,8 @@ class USGuidedStep( ctk.ctkWorkflowWidgetStep ) :
     #self.__layout.addRow( "", qt.QWidget() )
     self.setLayout(qt.QVBoxLayout())
     self.__layout = self.layout()
+    #self.setSizePolicy(qt.QSizePolicy.Minimum,qt.QSizePolicy.Minimum)
+    print self.sizeHint
     
     return self.__layout
 

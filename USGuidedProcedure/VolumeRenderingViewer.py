@@ -8,7 +8,7 @@ from PropertiesMenu import *
 
 from __main__ import vtk, qt, ctk, slicer
 
-class ModelsViewer():
+class VolumeRenderingViewer():
     '''
     classdocs
     '''
@@ -30,7 +30,7 @@ class ModelsViewer():
         f.close()
         """
         self.listWidget = qt.QListWidget() 
-        print("Constructor of ModelsViewer executed")
+        print("Constructor of VolumeRenderingViewer executed")
         self.listWidget.show()
         self.currentItem=None
         
@@ -51,46 +51,56 @@ class ModelsViewer():
         self.logic=logic
            
     def listenToScene(self):
-        self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onModelAdded)
+        vl=slicer.modules.volumes
+        vl=vl.logic()  
+        vl.SetMRMLScene(slicer.mrmlScene)
+        self.sceneObserver = vl.AddObserver('ModifiedEvent', self.onVolumeAdded)
+        #self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onVolumeAdded)
         
-    def onModelAdded(self, caller,  event):
-        numModels=slicer.mrmlScene.GetNumberOfNodesByClass("vtkMRMLModelNode") 
+    def onVolumeAdded(self, caller,  event):
+        print("Volumes module was modified")
+        
+        numVolumes=slicer.mrmlScene.GetNumberOfNodesByClass("vtkMRMLScalarVolumeNode") 
+        print "Number of volumes: " + str(numVolumes)
         #print('A model was added to the scene !')
-        if numModels>0:
-            for i in xrange(1,numModels):
-                node = slicer.mrmlScene.GetNthNodeByClass(i, "vtkMRMLModelNode")
-                if ((node is not None) and (not slicer.vtkMRMLSliceLogic.IsSliceModelNode(node)) and node.GetClassName()=="vtkMRMLModelNode" ):      
-                    print(node.GetName())  
-                    isAlreadyInList=False 
-                    j=0
-                    while ((j < self.listWidget.count) and (not isAlreadyInList)):
-                        isAlreadyInList=node.GetName()==self.listWidget.item(j).text()
-                        j=j+1
-                    if not isAlreadyInList:
-                        print('A model was added to the scene !')
-                        self.listWidget.addItem(node.GetName())
-                        node=slicer.util.getNode(node.GetName())
-                        node=slicer.vtkMRMLModelNode.SafeDownCast(node)
-                        displayNode=node.GetDisplayNode()
-                        #print("Info of added node:")
-                        #print displayNode.GetName()
-                        #print displayNode.GetColor()
-                        #print displayNode.GetOpacity()
+        if numVolumes>0:
+            for i in xrange(0,numVolumes):
+                node = slicer.mrmlScene.GetNthNodeByClass(i, "vtkMRMLScalarVolumeNode")
+                if not (node==None): 
+                    if (not (node.GetName() == "Image_Reference")):     
+                        print(node.GetName())  
+                        isAlreadyInList=False 
+                        j=0
+                        while ((j < self.listWidget.count) and (not isAlreadyInList)):
+                            isAlreadyInList=node.GetName()==self.listWidget.item(j).text()
+                            j=j+1
+                        if not isAlreadyInList:
+                            print('A volume was added to the scene !')
+                            self.listWidget.addItem(node.GetName())
+                            node=slicer.util.getNode(node.GetName())
+                            node=slicer.vtkMRMLScalarVolumeNode.SafeDownCast(node)
+                            self.logic.onVolumeAdded(node)
+                            #print("Info of added node:")
+    
     
         
     def addItem(self,item):
         self.listWidget.addItem(item)
         
     def onItemDoubleClicked(self,item):
+        vrNode=slicer.util.getNode("CPURayCastVolumeRendering")
+        slicer.mrmlScene.AddNode(vrNode)
         self.currentItem=item;
         # Get the current display node
         node=slicer.util.getNode(self.currentItem.text())
-        node=slicer.vtkMRMLModelNode.SafeDownCast(node)
+        node=slicer.vtkMRMLScalarVolumeNode.SafeDownCast(node)
+        
         self.currentDisplayNode=node.GetDisplayNode()
         currentOpacity= self.currentDisplayNode.GetOpacity()
         self.propertiesMenu.meshOpacitySlider.setValue(currentOpacity*100)
         isVisible=self.currentDisplayNode.GetVisibility()
         self.propertiesMenu.checkBoxVisible3D.setCheckState(isVisible)
+        
         #print item.text()
         self.propertiesMenu.show()
         

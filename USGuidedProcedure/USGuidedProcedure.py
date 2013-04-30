@@ -3,6 +3,7 @@ import unittest
 import math
 from __main__ import vtk, qt, ctk, slicer
 from ModelsViewer import *
+from VolumeRenderingViewer import *
 #
 # USGuidedProcedure
 #
@@ -239,7 +240,11 @@ class USGuidedProcedureLogic:
   def __init__(self):
     #self.createRegistrationLists()
     self.connectorNode = None 
+    self.USImageName= "Image_Reference"
     self.numberOfUltrasoundSnapshotsTaken=0
+    self.volumesAddedToTheScene=[] #contains the unique ID of the volumes added to the scene 
+    self.scalarRange=[0.,255.]
+    self.windowLevelMinMax=[20,30]
     pass
 
   def hasImageData(self,volumeNode):
@@ -272,6 +277,7 @@ class USGuidedProcedureLogic:
     print("Connected with Plus Server in Slicelet Class ")
     print("Status after start(): " + str(self.connectorNode.GetState()))
     
+    ## The nodes StylusTipToReference and ProbeToReference are added 
     stylusTipToReference=slicer.vtkMRMLLinearTransformNode()
     slicer.mrmlScene.AddNode(stylusTipToReference)
     stylusTipToReference.SetName("StylusTipToReference")
@@ -279,6 +285,7 @@ class USGuidedProcedureLogic:
     probeToReference=slicer.vtkMRMLLinearTransformNode()
     slicer.mrmlScene.AddNode(probeToReference)
     probeToReference.SetName("ProbeToReference")
+    
   
   def Disconnect(self):
     self.connectorNode.Stop()  
@@ -467,7 +474,7 @@ class USGuidedProcedureLogic:
     converter.SetVisibility(1,slicer.mrmlScene,stylusTipToRAS)
 
   def takeUSSnapshot(self):
-    image_RAS=slicer.util.getNode("Image_Reference")
+    image_RAS=slicer.util.getNode(self.USImageName)
     usn=slicer.modules.ultrasoundsnapshots
     usnl=usn.logic()
     usnl.AddSnapshot(image_RAS)
@@ -586,6 +593,114 @@ class USGuidedProcedureLogic:
   def getVolumeReconstructionSnapshot(self,igtlRemoteLogic,igtlConnectorNode): 
     igtlRemoteLogic.SendCommand('<Command Name="GetVolumeReconstructionSnapshot"></Command>',igtlConnectorNode.GetID())           
 
+  def listenToVolumesAdded(self):
+    vl=slicer.modules.volumes
+    vl=vl.logic()  
+    self.sceneObserver = vl.AddObserver('ModifiedEvent', self.onVolumeAdded)
+    
+  def onVolumeAdded(self,node):  
+    print("A volume was added!!")
+    node.AddObserver("ModifiedEvent",self.onVolumeModified)      
+    self.volumesAddedToTheScene.append(node.GetName())
+    
+    '''
+    It is assumed that the volume was created with respect to the Reference
+    The matrix associated with the volume must have the following structure
+    sx 0  0  ox
+    0  sy 0  oy
+    0  0  sz oz
+    with sx, sy, and sz >0
+    This is checked and if it is not true is modified.
+    By default Slicer add a volume with a ijkToRas matrix of the form:
+    -1    0    0
+    0    -1    0
+    0     0    1
+    In this case we want a ijkToRAS matrix equal to identity because we want to place the
+    volume with respect to the Reference.
+    ReferenceToRAS matrix is calculated during registration
+    '''
+    
+    matrix=vtk.vtkMatrix4x4()
+    node.GetIJKToRASMatrix(matrix) 
+    print matrix
+    sx = matrix.GetElement(0,0)
+    if (sx<0):
+        ox=matrix.GetElement(0,3)
+        matrix.SetElement(0,0,-sx)
+        matrix.SetElement(0,3,-ox)
+    sy = matrix.GetElement(1,1)
+    if (sy<0):
+        oy=matrix.GetElement(1,3)
+        matrix.SetElement(1,1,-sy)
+        matrix.SetElement(1,3,-oy)    
+    node.SetIJKToRASMatrix(matrix)
+    print matrix
+    
+    # Volumes are placed under the Reference coordinate system
+    referenceToRASNode=slicer.util.getNode("ReferenceToRAS")
+    if referenceToRASNode==None:
+        referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
+        slicer.mrmlScene.AddNode(referenceToRASNode)
+        referenceToRASNode.SetName("ReferenceToRAS")
+    
+    node.SetAndObserveTransformNodeID(referenceToRASNode.GetID()) 
+    node.SetDisplayVisibility(True)
+    
+    volumePropertyNode=slicer.vtkMRMLVolumePropertyNode()
+    slicer.mrmlScene.RegisterNodeClass(volumePropertyNode);
+
+    # the scalar opacity mapping function is configured
+    # it is a ramp with opacity of 0 equal to zero and opacity of 1 equal to 1. 
+    scalarOpacity = vtk.vtkPiecewiseFunction()
+    scalarOpacity.AddPoint(self.scalarRange[0],0.)
+    scalarOpacity.AddPoint(self.windowLevelMinMax[0],0.)
+    scalarOpacity.AddPoint(self.windowLevelMinMax[1],1.)
+    scalarOpacity.AddPoint(self.scalarRange[1],1.)
+
+    volumePropertyNode.SetScalarOpacity(scalarOpacity);
+    
+    # the color function is configured
+    # zero is associated to the scalar zero and 1 to the scalar 255
+    colorTransfer = vtk.vtkColorTransferFunction()
+    black=[0., 0., 0.]
+    white=[1.,1.,1.]
+    colorTransfer.AddRGBPoint(self.scalarRange[0],black[0],black[1],black[2])
+    colorTransfer.AddRGBPoint(self.windowLevelMinMax[0], black[0], black[1], black[2])
+    colorTransfer.AddRGBPoint(self.windowLevelMinMax[1], white[0], white[1], white[2]);
+    colorTransfer.AddRGBPoint(self.scalarRange[1], white[0], white[1], white[2]);
+    
+    volumePropertyNode.SetColor(colorTransfer)
+    
+    
+    vtkVolumeProperty=volumePropertyNode.GetVolumeProperty()
+    
+    vtkVolumeProperty.SetInterpolationTypeToNearest();
+    vtkVolumeProperty.ShadeOn();
+    vtkVolumeProperty.SetAmbient(0.30);
+    vtkVolumeProperty.SetDiffuse(0.60);
+    vtkVolumeProperty.SetSpecular(0.50);
+    vtkVolumeProperty.SetSpecularPower(40);
+    
+    slicer.mrmlScene.AddNode(volumePropertyNode)
+    
+    # The volume rendering display node is created
+    vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()
+    vrDisplayNode.SetAndObserveVolumeNodeID(node.GetID())
+    vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
+    slicer.mrmlScene.AddNode(vrDisplayNode)
+    vrDisplayNode.SetVisibility(True)
+    vrDisplayNode.AddObserver("ModifiedEvent",self.onVolumeRenderingModified)  
+    
+    vrDisplayNode.Modified()
+    vrDisplayNode.UpdateScene(slicer.mrmlScene)                   
+                        
+                                        
+  def onVolumeModified(self,caller,event):
+      print "Volume Modified"
+  
+  def onVolumeRenderingModified(self,caller,event):
+      print "Volume Rendering Modified"      
+                         
 class USGuidedProcedureTest(unittest.TestCase):
   """
   This is the test case for your scripted module.
@@ -882,6 +997,8 @@ class Slicelet(object):
     # TODO: should have way to pop up python interactor
     self.leftFrame = qt.QFrame(self.parent)
     self.leftFrame.setLayout( qt.QVBoxLayout() )
+    #self.leftFrame.setSizePolicy(qt.QSizePolicy.Maximum,qt.QSizePolicy.Maximum)
+    #self.leftFrame.setSizePolicy(qt.QSizePolicy.MinimumExpanding,qt.QSizePolicy.MinimumExpanding)
     
     #self.parent.setStyleSheet(
     #"QFrame{background: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #eef, stop: 1 #ccf); background-color: qlineargradient(spread:pad, x1:0.989, y1:0.012, x2:0, y2:0, stop:0 rgba(223, 227, 255, 255), stop:0.494318 rgba(164, 157, 194, 255), stop:1 rgba(115, 115, 115, 255));}"
@@ -896,13 +1013,14 @@ class Slicelet(object):
     #    "QSlider::add-page:horizontal:disabled {background: #eee;border-color: #999;}"
     #    "QSlider::handle:horizontal:disabled {background: #eee;border: 1px solid #aaa;border-radius: 4px;}")
     
-    self.parent.layout().addWidget(self.leftFrame)
+    self.parent.layout().addWidget(self.leftFrame,1)
+    
     self.addDataButton = qt.QPushButton("Add Data")
     self.leftFrame.layout().addWidget(self.addDataButton)
     self.addDataButton.connect("clicked()",slicer.app.ioManager().openAddDataDialog)
-    self.loadSceneButton = qt.QPushButton("Load Scene")
-    self.leftFrame.layout().addWidget(self.loadSceneButton)
-    self.loadSceneButton.connect("clicked()",slicer.app.ioManager().openLoadSceneDialog)
+    #self.loadSceneButton = qt.QPushButton("Load Scene")
+    #self.leftFrame.layout().addWidget(self.loadSceneButton)
+    #self.loadSceneButton.connect("clicked()",slicer.app.ioManager().openLoadSceneDialog)
     
     self.layoutSelectorFrame2 = qt.QFrame(self.parent)
     self.layoutSelectorFrame2.setLayout(qt.QHBoxLayout())
@@ -931,16 +1049,20 @@ class Slicelet(object):
     #SlicerLayoutFourOverFourView SlicerLayoutTabbedSliceView 
     self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutConventionalView)
     
-    self.parent.layout().addWidget(self.layoutManager)
+    self.parent.layout().addWidget(self.layoutManager,2)
     
     
     print("Previous line of the Constructor of ModelsViewer")
     self.modelsViewer = ModelsViewer()
     self.modelsViewer.setModuleLogic(self.moduleLogic)
     self.modelsViewer.listenToScene()
+    self.volumeRenderingViewer = VolumeRenderingViewer()
+    self.volumeRenderingViewer.setModuleLogic(self.moduleLogic)
+    self.volumeRenderingViewer.listenToScene()
     #item=qt.QListWidgetItem("unItem")
     #self.modelsViewer.addItem(item)
-    self.leftFrame.layout().addWidget(self.modelsViewer.getListWidget())
+    self.leftFrame.layout().addWidget(self.modelsViewer.getListWidget(),1)
+    self.leftFrame.layout().addWidget(self.volumeRenderingViewer.getListWidget(),1)
     '''
     Create and start the USGuided workflow.
     '''
@@ -954,8 +1076,7 @@ class Slicelet(object):
 
     self.workflowWidget.buttonBoxWidget().nextButtonDefaultText = ""
     self.workflowWidget.buttonBoxWidget().backButtonDefaultText = ""
-    
-    self.leftFrame.layout().addWidget( self.workflowWidget )
+    self.leftFrame.layout().addWidget( self.workflowWidget,3 )
     
     # create all wizard steps
     self.loadSceneStep = USGuidedWizard.LoadSceneStep('LoadScene')

@@ -51,8 +51,17 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
 
 
     self.updateWidgetFromParameters(self.parameterNode())
+    self.updateGeometry()
 
     qt.QTimer.singleShot(0, self.killButton)
+    print("Fiducials Widget size Hint:")
+    self.fiducialsWidget.sizeHint
+    print("Fiducials Widget size :")
+    self.fiducialsWidget.size
+    print("Spatial fiducials step size Hint:")
+    print self.sizeHint
+    print("Spatial fiducials step size")
+    print self.size
 
   def killButton(self):
     # hide useless button
@@ -286,4 +295,5 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
         slicer.mrmlScene.AddNode(fidNodeForRegistration)
         saml.SetActiveHierarchyNodeID(trackerListNodeForRegistration.GetID())
         slicer.mrmlScene.AddNode(trackerNodeForRegistration)
+        
         

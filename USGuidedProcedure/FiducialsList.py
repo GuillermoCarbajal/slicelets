@@ -134,8 +134,8 @@ class FiducialsList():
     def onSceneChanged(self, caller,  event):
         if self.updatingList:
           return
-        print('Scene changed !')
-        print(event)
+        #print('Scene changed !')
+        #print(event)
         if self.placeImageFiducialStep:
             self.updateFiducialsList()    
         

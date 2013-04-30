@@ -19,6 +19,8 @@ class NavigationStep( USGuidedStep ) :
     self.outputVolDeviceName= "recvol_Reference"
     self.liveReconstruction=True
     self.volumesAddedToTheScene=[] #contains the unique ID of the volumes added to the scene 
+    self.scalarRange=[0.,255.]
+    self.windowLevelMinMax=[0.1,254.99]
   def createUserInterface( self ):
     '''
     '''
@@ -64,11 +66,6 @@ class NavigationStep( USGuidedStep ) :
     volumeReconstructionLayout.addWidget(self.suspendReconstructionButton)
     self.suspendReconstructionButton.connect('clicked(bool)', self.onSuspendReconstructionButtonClicked)
     
-    self.getReconstructionSnapshotButton = qt.QPushButton("Snapshot")
-    self.getReconstructionSnapshotButton.toolTip = "Get a volume reconstruction snapshot"
-    volumeReconstructionLayout.addWidget(self.getReconstructionSnapshotButton)
-    self.getReconstructionSnapshotButton.connect('clicked(bool)', self.onGetReconstructionSnapshotButtonClicked)
-    
     self.__layout.addWidget(volumeReconstructionFrame)
     
 
@@ -99,7 +96,6 @@ class NavigationStep( USGuidedStep ) :
     pNode = self.parameterNode()
     pNode.SetParameter('currentStep', self.stepid)
     print("We are in the onEntry function of NavigationStep")
-    
     self.logic.showRedSliceIn3D()
     self.listenToScene()
     
@@ -128,9 +124,6 @@ class NavigationStep( USGuidedStep ) :
     
   def onSnapshotButtonClicked(self):
     self.logic.takeUSSnapshot2()  
-
-  def onGetReconstructionSnapshotButtonClicked(self):
-      self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
          
       
   def onStartReconstructionButtonClicked(self):
@@ -139,10 +132,15 @@ class NavigationStep( USGuidedStep ) :
        self.logic.startVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode,self.outputVolFilename,self.outputVolDeviceName)
        self.startReconstructionButton.setText("Stop")
        self.suspendReconstructionButton.setEnabled(True)
+       #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
     else:
        self.logic.stopVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
        self.startReconstructionButton.setText("Start")   
        self.suspendReconstructionButton.setEnabled(False)
+       #node=slicer.vtkMRMLScalarVolumeNode()
+       #node.SetName(self.outputVolDeviceName)
+       #slicer.mrmlScene.AddNode(node)
+
     #while(not self.reconstructionSuspended):
     #print("Start sleeping")
     #time.sleep(5)
@@ -162,39 +160,11 @@ class NavigationStep( USGuidedStep ) :
        
   def listenToScene(self):
     self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onVolumeAdded)
+   
     
   def onVolumeAdded(self, caller,  event):  
-     node=slicer.util.getNode(self.outputVolDeviceName)  
-     if node is not None:
-         isAlreadyAdded = False
-         for object in self.volumesAddedToTheScene:
-             if object is self.outputVolDeviceName:
-                isAlreadyAdded = True 
-         if not isAlreadyAdded:       
-            self.volumesAddedToTheScene.append(self.outputVolDeviceName)
-            print(self.outputVolDeviceName + " was added")
-            
-            volumePropertyNode=slicer.vtkMRMLVolumePropertyNode()
-            slicer.mrmlScene.AddNode(volumePropertyNode)
-
-            vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()
-            vrDisplayNode.SetAndObserveVolumeNodeID(node.GetID())
-            vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
-            slicer.mrmlScene.AddNode(vrDisplayNode)
-
-            volumeDisplayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
-            volumeDisplayNode.SetThreshold(10,245)
-            volumeDisplayNode.SetApplyThreshold(1)
-            volumeDisplayNode.SetScalarRange(0,255)
-            volumeDisplayNode.SetAutoWindowLevel(1)
-            slicer.mrmlScene.AddNode(volumeDisplayNode)
-
-            node.AddAndObserveDisplayNodeID(volumeDisplayNode.GetID())
-
-            vrLogic = slicer.vtkSlicerVolumeRenderingLogic()
-            vrLogic.SetMRMLScene(slicer.mrmlScene)
-            #vrLogic.CopyScalarDisplayToVolumeRenderingDisplayNode(vrDisplayNode,volumeDisplayNode)
-            vtkvp=volumePropertyNode.GetVolumeProperty()
-            vrLogic.SetThresholdToVolumeProp([0,250],[30,230],vtkvp,True,True)
-         #if self.liveReconstruction==True:
-         #   self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+      node = slicer.util.getNode(self.outputVolDeviceName)
+      if not node==None:
+         vl=slicer.modules.volumes
+         vl=vl.logic()
+         vl.Modified()

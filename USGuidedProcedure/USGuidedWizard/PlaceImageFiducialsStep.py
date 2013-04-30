@@ -51,6 +51,15 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
     self.fiducialsWidget.fiducialsList.setColumnHidden(3, True)
     self.fiducialsWidget.fiducialsList.setColumnHidden(4, True)
     qt.QTimer.singleShot(0, self.killButton)
+    
+    print("Fiducials Widget size Hint:")
+    print self.fiducialsWidget.sizeHint
+    print("Fiducials Widget size :")
+    print self.fiducialsWidget.size
+    print("Image fiducials step size Hint:")
+    print self.sizeHint
+    print("Image fiducials step size")
+    print self.size
 
   def killButton(self):
     # hide useless button
