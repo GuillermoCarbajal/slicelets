@@ -242,7 +242,6 @@ class USGuidedProcedureLogic:
     self.connectorNode = None 
     self.USImageName= "Image_Reference"
     self.numberOfUltrasoundSnapshotsTaken=0
-    self.volumesAddedToTheScene=[] #contains the unique ID of the volumes added to the scene 
     self.scalarRange=[0.,255.]
     self.windowLevelMinMax=[20,30]
     pass
@@ -296,53 +295,57 @@ class USGuidedProcedureLogic:
   def getConnectionStatus(self):
       return self.connectionStatus
     
-  def changeMousePlacingState(self):
+  def addFiducialToList(self,listName):
     print("Place fiducial pressed")
     saml = slicer.modules.annotations.logic() 
-    fnode=slicer.util.getNode("Fiducials List")
-    saml.SetActiveHierarchyNodeID(fnode.GetID())
-    snode=slicer.vtkMRMLSelectionNode.SafeDownCast(slicer.mrmlScene.GetNodeByID("vtkMRMLSelectionNodeSingleton"))
-    inode=slicer.vtkMRMLInteractionNode.SafeDownCast(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
-    snode.SetActiveAnnotationID("vtkMRMLAnnotationFiducialNode")
-    inode.SwitchToSinglePlaceMode()
-  
-  def createRegistrationLists(self):
-     #check if we already have the registration lists
-    if  slicer.mrmlScene.GetNodesByName('Fiducials List').GetNumberOfItems()>0:
-        return
-        
-    saml=slicer.modules.annotations.logic()
-    saml.RegisterNodes()
-    saml.AddHierarchy()
-    cnode=saml.GetActiveHierarchyNode()
-    cnode.SetName("Fiducials List")
-    cnode=cnode.GetParentNode()
-    saml.SetActiveHierarchyNodeID(cnode.GetID())
-    saml.AddHierarchy()
-    cnode=saml.GetActiveHierarchyNode()
-    cnode.SetName("Tracker Points List") 
-   
-    cnode=cnode.GetParentNode()
-    saml.SetActiveHierarchyNodeID(cnode.GetID())
-    saml.AddHierarchy()
-    cnode=saml.GetActiveHierarchyNode()
-    cnode.SetName("Fiducials List (for registration)")
-    cnode=cnode.GetParentNode()
-    saml.SetActiveHierarchyNodeID(cnode.GetID())
-    saml.AddHierarchy()
-    cnode=saml.GetActiveHierarchyNode()
-    cnode.SetName("Tracker Points List (for registration)") 
- 
-    print("Registration lists were created")
+    listNode=slicer.util.getNode(listName)
+    if listNode is not None:
+      saml.SetActiveHierarchyNodeID(listNode.GetID())
+      snode=slicer.vtkMRMLSelectionNode.SafeDownCast(slicer.mrmlScene.GetNodeByID("vtkMRMLSelectionNodeSingleton"))
+      inode=slicer.vtkMRMLInteractionNode.SafeDownCast(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
+      snode.SetActiveAnnotationID("vtkMRMLAnnotationFiducialNode")
+      inode.SwitchToSinglePlaceMode()
+    else:
+      print listName + "list does not exit!" 
     
-  #def createRegistrationLists2(self):
-  #  saml=slicer.vtkSlicerAnnotationModuleLogic()
-  #  fidListHierarchyNode = slicer.vtkMRMLAnnotationHierarchyNode()
-  #  fidListHierarchyNode.SetName("Fiducials List")   
-  #  slicer.mrmlScene.AddNode(fidListHierarchyNode)
-  #  fidListHierarchyNode.SetParentNodeID(saml.GetTopLevelHierarchyNodeID())
-  #  saml.SetActiveHierarchyNodeID(fidListHierarchyNode.GetID())
-  #  print("Registration list created")
+  
+  def createRegistrationLists(self): 
+      saml=slicer.modules.annotations.logic()
+      saml.RegisterNodes() 
+      parentNode=saml.GetActiveHierarchyNode()
+      
+      # Create the Fiducials List
+      self.createAnnotationList("Fiducials List", parentNode)
+      # Create the Tracker Points List
+      self.createAnnotationList("Tracker Point List", parentNode)
+      # Create the Fiducials List used for Registration
+      self.createAnnotationList("Fiducials List (for registration)", parentNode)
+      # Create the Tracker Points List used for Registration
+      self.createAnnotationList("Tracker Points List (for registration)", parentNode)
+      
+  def createTargetList(self): 
+      # The target list is created in the same level that the registration list   
+      saml=slicer.modules.annotations.logic()
+      saml.RegisterNodes() 
+      activeNode=saml.GetActiveHierarchyNode()
+      parentNode = activeNode.GetParentNode()
+      self.createAnnotationList("Target List",parentNode)
+      
+  def createAnnotationList(self,listName,parentNode):
+     #check if we already have the annotation list
+    if  slicer.mrmlScene.GetNodesByName(listName).GetNumberOfItems()>0:
+        return
+    
+    saml=slicer.modules.annotations.logic()
+    saml.RegisterNodes() 
+    # Set the parent node as the active node
+    saml.SetActiveHierarchyNodeID(parentNode.GetID())
+    # A new Annotation node id added to the scene.
+    # When a Annotation node is added, this  recently created node turns into the active node 
+    saml.AddHierarchy()
+    createdNode=saml.GetActiveHierarchyNode()
+    createdNode.SetName(listName) 
+    
     
   def printFids(self):
     fiducialListNode=slicer.util.getNode("Fiducials List")
@@ -598,10 +601,9 @@ class USGuidedProcedureLogic:
     vl=vl.logic()  
     self.sceneObserver = vl.AddObserver('ModifiedEvent', self.onVolumeAdded)
     
-  def onVolumeAdded(self,node):  
+  def onVolumeAdded(self,volumeNode):  
     print("A volume was added!!")
-    node.AddObserver("ModifiedEvent",self.onVolumeModified)      
-    self.volumesAddedToTheScene.append(node.GetName())
+    volumeNode.AddObserver("ModifiedEvent",self.onVolumeModified)      
     
     '''
     It is assumed that the volume was created with respect to the Reference
@@ -621,7 +623,7 @@ class USGuidedProcedureLogic:
     '''
     
     matrix=vtk.vtkMatrix4x4()
-    node.GetIJKToRASMatrix(matrix) 
+    volumeNode.GetIJKToRASMatrix(matrix) 
     print matrix
     sx = matrix.GetElement(0,0)
     if (sx<0):
@@ -633,7 +635,7 @@ class USGuidedProcedureLogic:
         oy=matrix.GetElement(1,3)
         matrix.SetElement(1,1,-sy)
         matrix.SetElement(1,3,-oy)    
-    node.SetIJKToRASMatrix(matrix)
+    volumeNode.SetIJKToRASMatrix(matrix)
     print matrix
     
     # Volumes are placed under the Reference coordinate system
@@ -643,8 +645,8 @@ class USGuidedProcedureLogic:
         slicer.mrmlScene.AddNode(referenceToRASNode)
         referenceToRASNode.SetName("ReferenceToRAS")
     
-    node.SetAndObserveTransformNodeID(referenceToRASNode.GetID()) 
-    node.SetDisplayVisibility(True)
+    volumeNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID()) 
+    volumeNode.SetDisplayVisibility(True)
     
     volumePropertyNode=slicer.vtkMRMLVolumePropertyNode()
     slicer.mrmlScene.RegisterNodeClass(volumePropertyNode);
@@ -685,7 +687,7 @@ class USGuidedProcedureLogic:
     
     # The volume rendering display node is created
     vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()
-    vrDisplayNode.SetAndObserveVolumeNodeID(node.GetID())
+    vrDisplayNode.SetAndObserveVolumeNodeID(volumeNode.GetID())
     vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
     slicer.mrmlScene.AddNode(vrDisplayNode)
     vrDisplayNode.SetVisibility(True)

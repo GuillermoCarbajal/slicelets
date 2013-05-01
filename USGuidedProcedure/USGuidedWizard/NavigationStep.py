@@ -21,6 +21,8 @@ class NavigationStep( USGuidedStep ) :
     self.volumesAddedToTheScene=[] #contains the unique ID of the volumes added to the scene 
     self.scalarRange=[0.,255.]
     self.windowLevelMinMax=[0.1,254.99]
+    
+    
   def createUserInterface( self ):
     '''
     '''
@@ -47,6 +49,12 @@ class NavigationStep( USGuidedStep ) :
     snapshotButton.toolTip = "Take an ultrasound snapshot"
     self.__layout.addWidget(snapshotButton)
     snapshotButton.connect('clicked(bool)', self.onSnapshotButtonClicked)
+    
+    # Add target button
+    addTargetButton = qt.QPushButton("Add target")
+    addTargetButton.toolTip = "Add a target to the scene"
+    self.__layout.addWidget(addTargetButton)
+    addTargetButton.connect('clicked(bool)', self.onAddTargetButtonClicked)
     
     # Volume reconstruction
     
@@ -97,8 +105,11 @@ class NavigationStep( USGuidedStep ) :
     pNode.SetParameter('currentStep', self.stepid)
     print("We are in the onEntry function of NavigationStep")
     self.logic.showRedSliceIn3D()
-    self.listenToScene()
-    
+    # If the Target list does not exit, it is created.
+    self.logic.createTargetList()
+    self.listenToTargetListModification()
+    # listen to volumes added
+    self.listenToVolumesAdded()
     qt.QTimer.singleShot(0, self.killButton)
 
   def onExit(self, goingTo, transitionType):
@@ -158,9 +169,12 @@ class NavigationStep( USGuidedStep ) :
        self.suspendReconstructionButton.setText("Suspend") 
        
        
-  def listenToScene(self):
+  def listenToVolumesAdded(self):
     self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onVolumeAdded)
-   
+
+  def listenToTargetListModification(self):
+    fiducialListNode=slicer.util.getNode("Target List")
+    fiducialListNode.AddObserver('ModifiedEvent', self.onTargetListModification)
     
   def onVolumeAdded(self, caller,  event):  
       node = slicer.util.getNode(self.outputVolDeviceName)
@@ -168,3 +182,25 @@ class NavigationStep( USGuidedStep ) :
          vl=slicer.modules.volumes
          vl=vl.logic()
          vl.Modified()
+         
+  def onAddTargetButtonClicked(self):   
+      self.logic.addFiducialToList("Target List")   
+      
+  def onTargetListModification(self, caller, event):
+      print ("Target List was modified")
+      # populate the list
+      targetListNode=slicer.util.getNode("Target List")
+          
+      print "Number of target: " + str(targetListNode.GetNumberOfChildrenNodes())
+      for childrenIndex in xrange(targetListNode.GetNumberOfChildrenNodes()):
+          fidHierarchyNode=targetListNode.GetNthChildNode(childrenIndex)
+          fidNode=fidHierarchyNode.GetAssociatedNode()
+          fidNode.SetName("T"+str(childrenIndex))
+          fidDisplayNode=fidNode.GetAnnotationPointDisplayNode()
+          fidTextDisplay=fidNode.GetAnnotationTextDisplayNode()
+          fidDisplayNode.SetColor([0,0,1])
+          fidTextDisplay.SetColor([0,0,1])
+          if not fidNode:
+            print 'Fid node nulo'
+            continue       
+        

@@ -61,7 +61,6 @@ class FiducialsList():
     
         #listeners
         #self.listenToAnnotations()
-        self.listenToScene()
         self.updatingList = False
         self.placeImageFiducialStep=False
         
@@ -75,7 +74,7 @@ class FiducialsList():
         self.logic=logic
         
     def onPlaceFiducialButtomClicked(self):   
-        self.logic.changeMousePlacingState()  
+        self.logic.addFiducialToList("Fiducials List")  
 
     def onRemoveFiducialButtonClicked(self):   
           
@@ -128,10 +127,10 @@ class FiducialsList():
     def onLoadFiducialListClicked(self):  
         self.logic.addFiducialsToImageList()   
            
-    def listenToScene(self):
-        self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onSceneChanged)
-  
-    def onSceneChanged(self, caller,  event):
+    def listenToListModifications(self):
+        self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onFiducialsListModified)
+        
+    def onFiducialsListModified(self, caller,  event):
         if self.updatingList:
           return
         #print('Scene changed !')
