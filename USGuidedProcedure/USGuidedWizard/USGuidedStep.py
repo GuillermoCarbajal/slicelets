@@ -30,7 +30,7 @@ class USGuidedStep( ctk.ctkWorkflowWidgetStep ) :
     self.setLayout(qt.QVBoxLayout())
     self.__layout = self.layout()
     #self.setSizePolicy(qt.QSizePolicy.Minimum,qt.QSizePolicy.Minimum)
-    print self.sizeHint
+    print "User Interface was created"
     
     return self.__layout
 
@@ -39,12 +39,19 @@ class USGuidedStep( ctk.ctkWorkflowWidgetStep ) :
     if comingFrom: comingFromId = comingFrom.id()
     #print "-> onEntry - current [%s] - comingFrom [%s]" % ( self.id(), comingFromId )
     super( USGuidedStep, self ).onEntry( comingFrom, transitionType )
+    
+    buttons=self.buttonBoxWidget.children()
+    goToButton=buttons[3]
+    goToButton.hide()
 
   def onExit( self, goingTo, transitionType ):
     goingToId = "None"
     if goingTo: goingToId = goingTo.id()
     #print "-> onExit - current [%s] - goingTo [%s]" % ( self.id(), goingToId )
     super( USGuidedStep, self ).onExit( goingTo, transitionType )
+    buttons=self.buttonBoxWidget.children()
+    goToButton=buttons[3]
+    goToButton.hide()
 
   def validate( self, desiredBranchId ):
     return
@@ -63,3 +70,6 @@ class USGuidedStep( ctk.ctkWorkflowWidgetStep ) :
 
   def setModuleLogic(self, moduleLogic):
     self.logic=moduleLogic
+    
+  def setButtonBoxWidget(self,buttonBoxWidget):
+    self.buttonBoxWidget=buttonBoxWidget;  

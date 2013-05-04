@@ -8,7 +8,7 @@ class LoadSceneStep( USGuidedStep ) :
   def __init__( self, stepid ):
     self.initialize( stepid )
     self.setName( '0. Load a scene' )
-    self.setDescription( 'Load a previously saved scene...' )    
+    #self.setDescription( 'Load a previously saved scene...' )    
     self.__parent = super( LoadSceneStep, self )
     
   def createUserInterface( self ):
@@ -33,8 +33,6 @@ class LoadSceneStep( USGuidedStep ) :
     self.loadSceneButton.connect("clicked()",self.onLoadSceneButtonClicked)
 
     self.updateWidgetFromParameters(self.parameterNode())
-
-
 
 
     qt.QTimer.singleShot(0, self.killButton)
@@ -79,4 +77,9 @@ class LoadSceneStep( USGuidedStep ) :
     pNode = self.parameterNode()
     
   def onLoadSceneButtonClicked(self):
-    self.loadSceneButton.connect("clicked()",slicer.app.ioManager().openLoadSceneDialog)
+    slicer.app.ioManager().openLoadSceneDialog()
+    
+    
+    
+    
+    

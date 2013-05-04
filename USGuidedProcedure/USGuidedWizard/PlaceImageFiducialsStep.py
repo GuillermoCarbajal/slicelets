@@ -10,9 +10,10 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
   def __init__( self, stepid ):
     self.initialize( stepid )
     self.setName( '2. PlaceImageFiducials' )
-    self.setDescription( 'Place fiducials in the image' )
+    #self.setDescription( 'Place fiducials in the image' )
   
     self.__parent = super( PlaceImageFiducialsStep, self )
+    
 
   def createUserInterface( self ):
     '''
@@ -21,6 +22,8 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
     # TODO: might make sense to hide the button for the last step at this
     # point, but the widget does not have such option
     self.__layout = self.__parent.createUserInterface()
+    
+
     
 #    # BUTTONS --------------------------------------------------------------------
 #    This is commented out and the buttons are in the UI from the designer

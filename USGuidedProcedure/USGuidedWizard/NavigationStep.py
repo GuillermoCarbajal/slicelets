@@ -8,7 +8,7 @@ class NavigationStep( USGuidedStep ) :
   def __init__( self, stepid ):
     self.initialize( stepid )
     self.setName( '5. Navigation' )
-    self.setDescription( 'Navigation step' )
+    #self.setDescription( 'Navigation step' )
    
     self.__parent = super( NavigationStep, self )
     self.igtlConnectorNode = None
@@ -44,6 +44,20 @@ class NavigationStep( USGuidedStep ) :
     self.__layout.addWidget(showStylusButton)
     showStylusButton.connect('clicked(bool)', self.onShowStylusButtonClicked)
     '''
+      
+    self.isTrackingFrame = qt.QFrame()
+    self.isTrackingFrame.setLayout(qt.QHBoxLayout())
+    self.__layout.addWidget(self.isTrackingFrame)
+
+    self.isTrackingLabel = qt.QLabel("Tracking enabled: ", self.isTrackingFrame)
+    self.isTrackingLabel.setToolTip( "Enable/Disable the tracking")
+    self.isTrackingFrame.layout().addWidget(self.isTrackingLabel)
+
+    self.isTrackingCheckBox = qt.QCheckBox(self.isTrackingFrame)
+    self.isTrackingCheckBox.setCheckState(2)
+    self.isTrackingFrame.layout().addWidget(self.isTrackingCheckBox)
+    self.isTrackingCheckBox.connect("stateChanged(int)",self.onTrackingStateChanged)
+      
     # Add Ultrasound Snapshot
     snapshotButton = qt.QPushButton("US snapshot")
     snapshotButton.toolTip = "Take an ultrasound snapshot"
@@ -62,6 +76,9 @@ class NavigationStep( USGuidedStep ) :
     volumeReconstructionFrame.setLayout(qt.QHBoxLayout())
     volumeReconstructionLayout=volumeReconstructionFrame.layout()
     
+    self.volumeReconstructionLabel = qt.QLabel("Volume reconstruction: ", self.isTrackingFrame)
+    self.volumeReconstructionLabel.setToolTip( "Perform volume reconstruction")
+    volumeReconstructionFrame.layout().addWidget(self.volumeReconstructionLabel)
      
     self.startReconstructionButton = qt.QPushButton("Start")
     self.startReconstructionButton.toolTip = "Start/Stop the volume reconstruction"
@@ -94,20 +111,26 @@ class NavigationStep( USGuidedStep ) :
     print("We are in the validate function of NavigationStep")
 
   def onEntry(self, comingFrom, transitionType):
+    
+    self.logic.showRedSliceIn3D(1)
+      
+    # If the Target list does not exit, it is created.
+    self.logic.createTargetList()
+    self.listenToTargetListModification()
+      
     igtlRemote=slicer.modules.openigtlinkremote
     self.igtlRemoteLogic=igtlRemote.logic() 
     self.igtlRemoteLogic.SetMRMLScene(slicer.mrmlScene)
     self.igtlConnectorNode = slicer.util.getNode("Plus Server Connection")  
     
     super(NavigationStep, self).onEntry(comingFrom, transitionType)
+    
     self.updateWidgetFromParameters(self.parameterNode())
     pNode = self.parameterNode()
     pNode.SetParameter('currentStep', self.stepid)
     print("We are in the onEntry function of NavigationStep")
-    self.logic.showRedSliceIn3D()
-    # If the Target list does not exit, it is created.
-    self.logic.createTargetList()
-    self.listenToTargetListModification()
+    
+    
     # listen to volumes added
     self.listenToVolumesAdded()
     qt.QTimer.singleShot(0, self.killButton)
@@ -118,6 +141,8 @@ class NavigationStep( USGuidedStep ) :
 
     super(NavigationStep, self).onExit(goingTo, transitionType) 
     print("We are in the onExit function of NavigationStep")
+    
+    
   def updateWidgetFromParameters(self, parameterNode):
     print("We are in the place fiducials step")
 
@@ -128,7 +153,7 @@ class NavigationStep( USGuidedStep ) :
     pNode = self.parameterNode()
 
   def onShowRedSliceButtonClicked(self):
-    self.logic.showRedSliceIn3D()
+    self.logic.showRedSliceIn3D(True)
 
   def onShowStylusButtonClicked(self):
     self.logic.showStylusTipToRAS()
@@ -203,4 +228,11 @@ class NavigationStep( USGuidedStep ) :
           if not fidNode:
             print 'Fid node nulo'
             continue       
+  def onTrackingStateChanged(self,status):     
+        if status==2:
+            self.logic.startTracking()
+            self.logic.showRedSliceIn3D(True)
+        else:
+            self.logic.stopTracking()
+            self.logic.showRedSliceIn3D(False)
         

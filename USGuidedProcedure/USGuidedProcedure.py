@@ -53,6 +53,7 @@ class USGuidedProcedureWidget:
     if not parent:
       self.setup()
       self.parent.show()
+      
   def setup(self):
   
     self.logic = USGuidedProcedureLogic()
@@ -260,7 +261,7 @@ class USGuidedProcedureLogic:
     return True
 
   
-  def CreateAndAssociateConectorNodeWithScene(self):
+  def createAndAssociateConectorNodeWithScene(self):
     cn=slicer.util.getNode('Plus Server Connection')  
     if cn == None:
        cn=slicer.vtkMRMLIGTLConnectorNode()
@@ -269,10 +270,10 @@ class USGuidedProcedureLogic:
        print("IGTL Connector node was created!")
     self.connectorNode = cn
        
-  def Connect(self):
+  def connectWithTracker(self):
     self.connectorNode.SetTypeClient("localhost",18944)
     print("Status before start(): " + str(self.connectorNode.GetState()))
-    self.connectorNode.Start()
+    self.startTracking()
     print("Connected with Plus Server in Slicelet Class ")
     print("Status after start(): " + str(self.connectorNode.GetState()))
     
@@ -286,7 +287,10 @@ class USGuidedProcedureLogic:
     probeToReference.SetName("ProbeToReference")
     
   
-  def Disconnect(self):
+  def startTracking(self):
+      self.connectorNode.Start()
+      
+  def stopTracking(self):
     self.connectorNode.Stop()  
     
   def getConnectorNode(self): 
@@ -311,7 +315,7 @@ class USGuidedProcedureLogic:
   
   def createRegistrationLists(self): 
       saml=slicer.modules.annotations.logic()
-      saml.RegisterNodes() 
+      #saml.RegisterNodes() 
       parentNode=saml.GetActiveHierarchyNode()
       
       # Create the Fiducials List
@@ -326,7 +330,7 @@ class USGuidedProcedureLogic:
   def createTargetList(self): 
       # The target list is created in the same level that the registration list   
       saml=slicer.modules.annotations.logic()
-      saml.RegisterNodes() 
+      #saml.RegisterNodes() 
       activeNode=saml.GetActiveHierarchyNode()
       parentNode = activeNode.GetParentNode()
       self.createAnnotationList("Target List",parentNode)
@@ -337,7 +341,6 @@ class USGuidedProcedureLogic:
         return
     
     saml=slicer.modules.annotations.logic()
-    saml.RegisterNodes() 
     # Set the parent node as the active node
     saml.SetActiveHierarchyNodeID(parentNode.GetID())
     # A new Annotation node id added to the scene.
@@ -442,31 +445,26 @@ class USGuidedProcedureLogic:
     return node
   
     
-  def showRedSliceIn3D(self):  
-    lm=slicer.app.layoutManager()
-    redWidget=lm.sliceWidget('Red')
-    # Choose the image_RAS volume as a background
-    redWidgetLogic=redWidget.sliceLogic()
-    image_RAS=slicer.util.getNode("Image_Reference")
-    redWidgetCompNode=redWidgetLogic.GetSliceCompositeNode()
-    redWidgetCompNode.SetBackgroundVolumeID(image_RAS.GetID())
-    # Show the volume in 3D
-    redSliceControllerWidget=redWidget.sliceController()
-    redSliceControllerWidget.setSliceVisible(1)
-    # Volume reslice driver configuration
-    # As there are two "Red" nodes I have to use a collection
-    redNodes=slicer.mrmlScene.GetNodesByClassByName("vtkMRMLSliceNode","Red")
-    sliceIt=vtk.vtkCollectionIterator()
-    sliceIt.SetCollection(redNodes)
-    redNode=sliceIt.GetCurrentObject()
-    redNode=slicer.vtkMRMLSliceNode.SafeDownCast(redNode)
+  def showRedSliceIn3D(self,isShown):  
+    
+    image_RAS=slicer.util.getNode("Image_Reference")  
+    redNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
     vrd=slicer.modules.volumereslicedriver
     vrdl=vrd.logic()
     vrdl.SetMRMLScene(slicer.mrmlScene)
     vrdl.SetDriverForSlice(image_RAS.GetID(),redNode)
     vrdl.SetModeForSlice(vrdl.MODE_TRANSVERSE180,redNode)
-    #vrdl.SetOrientationForSlice(3,redNode)
-    #vrdl.SetMethodForSlice(2,redNode)
+      
+    # Set the background volume 
+    redWidgetCompNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeRed")
+    redWidgetCompNode.SetBackgroundVolumeID(image_RAS.GetID())
+    # Show the volume in 3D
+    redNode.SetSliceVisible(isShown)
+    # Adjust the size of the US image in the Axial view
+    sliceLogic=slicer.vtkMRMLSliceLogic()
+    sliceLogic.SetName("Red")
+    sliceLogic.SetMRMLScene(slicer.mrmlScene)
+    #sliceLogic.FitSliceToAll()
 	
   def showStylusTipToRAS(self):
     stylusTipToRAS=slicer.util.getNode("StylusTipToRAS")
@@ -522,13 +520,14 @@ class USGuidedProcedureLogic:
     # In parent transform is saved the ReferenceToRAS transform
     parentTransform=vtk.vtkTransform()
     parentTransform.Identity()
-    if image_RAS.GetParentTransformNode() is not None:
+    if not image_RAS.GetParentTransformNode()==None:
       parentMatrix=vtk.vtkMatrix4x4()
       parentTransformNode=image_RAS.GetParentTransformNode()
       parentTransformNode.GetMatrixTransformToWorld(parentMatrix)
-      aux=parentTransform.GetMatrix()
-      aux.DeepCopy(parentMatrix)
-      parentTransform.Update()
+      #aux=parentTransform.GetMatrix()
+      #aux.DeepCopy(parentMatrix)
+      #parentTransform.Update()
+      parentTransform.SetMatrix(parentMatrix)
       
     inImageTransform=vtk.vtkTransform()
     inImageTransform.Identity()
@@ -703,6 +702,28 @@ class USGuidedProcedureLogic:
   def onVolumeRenderingModified(self,caller,event):
       print "Volume Rendering Modified"      
                          
+                         
+  def onResetView(self):
+      print "View should be reset!"  
+      #lm=slicer.app.layoutManager()
+      #renderer=lm.activeThreeDRenderer()  
+      camera1=slicer.mrmlScene.GetNodeByID("vtkMRMLCameraNode1")
+      if not camera1==None:
+         #camera1.Reset(True,True,True,renderer)  
+         glCamera1 = camera1.GetCamera()
+         glCamera1.SetFocalPoint(0,0,0)
+         glCamera1.SetPosition(-500,0,0)   
+         glCamera1.SetViewAngle(30)
+         glCamera1.SetViewUp(0,0,1)
+      camera2=slicer.mrmlScene.GetNodeByID("vtkMRMLCameraNode2")
+      if not camera2==None:
+         #camera2.Reset(True,True,True,renderer)  
+         glCamera2 = camera2.GetCamera()
+         glCamera2.SetFocalPoint(0,0,0)
+         glCamera2.SetPosition(0,500,0)   
+         glCamera2.SetViewAngle(30)   
+         glCamera2.SetViewUp(0,0,1)       
+           
 class USGuidedProcedureTest(unittest.TestCase):
   """
   This is the test case for your scripted module.
@@ -1020,9 +1041,14 @@ class Slicelet(object):
     self.addDataButton = qt.QPushButton("Add Data")
     self.leftFrame.layout().addWidget(self.addDataButton)
     self.addDataButton.connect("clicked()",slicer.app.ioManager().openAddDataDialog)
+    
+    self.saveSceneButton = qt.QPushButton("Save Data")
+    self.leftFrame.layout().addWidget(self.saveSceneButton)
+    self.saveSceneButton.connect("clicked()",slicer.app.ioManager().openSaveDataDialog)
     #self.loadSceneButton = qt.QPushButton("Load Scene")
     #self.leftFrame.layout().addWidget(self.loadSceneButton)
     #self.loadSceneButton.connect("clicked()",slicer.app.ioManager().openLoadSceneDialog)
+    
     
     self.layoutSelectorFrame2 = qt.QFrame(self.parent)
     self.layoutSelectorFrame2.setLayout(qt.QHBoxLayout())
@@ -1039,9 +1065,14 @@ class Slicelet(object):
     self.layoutSelector2.addItem("Double 3D View")
     self.layoutSelectorFrame2.layout().addWidget(self.layoutSelector2)
     self.layoutSelector2.connect('activated(int)', self.onLayoutSelect)
-
-    self.layoutManager = slicer.qMRMLLayoutWidget()
-    self.layoutManager.setMRMLScene(slicer.mrmlScene)
+    
+    self.resetViewButton = qt.QPushButton("R")
+    self.layoutSelectorFrame2.layout().addWidget(self.resetViewButton)
+    self.resetViewButton.connect('clicked()', self.moduleLogic.onResetView)
+    
+    self.layoutWidget = slicer.qMRMLLayoutWidget()
+    self.layoutWidget.setMRMLScene(slicer.mrmlScene)
+    
     #self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUp3DView)
     #self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)   
     #self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutTabbedSliceView)
@@ -1049,9 +1080,9 @@ class Slicelet(object):
     #SlicerLayout3DPlusLightboxView SlicerLayoutCompareGridView SlicerLayoutCompareWidescreenView SlicerLayoutConventionalQuantitativeView SlicerLayoutConventionalView SlicerLayoutConventionalWidescreenView
     #SlicerLayoutCustomView SlicerLayoutDefaultView SlicerLayoutOneUp3DView SlicerLayoutOneUpRedSliceView SlicerLayoutOneUpGreenSliceView SlicerLayoutOneUpYellowSliceView SlicerLayoutDual3DView 
     #SlicerLayoutFourOverFourView SlicerLayoutTabbedSliceView 
-    self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutConventionalView)
+    self.layoutWidget.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutConventionalView)
     
-    self.parent.layout().addWidget(self.layoutManager,2)
+    self.parent.layout().addWidget(self.layoutWidget,2)
     
     
     print("Previous line of the Constructor of ModelsViewer")
@@ -1070,29 +1101,40 @@ class Slicelet(object):
     '''
     self.workflow = ctk.ctkWorkflow()
 
-    self.workflowWidget = ctk.ctkWorkflowTabWidget()
+    self.workflowWidget = ctk.ctkWorkflowStackedWidget()
     self.workflowWidget.setWorkflow( self.workflow )
     
     bw=self.workflowWidget.buttonBoxWidget()
     bw.hideInvalidButtons=True
+    
+    
+    groupBox=self.workflowWidget.workflowGroupBox()
+    groupBox.errorTextEnabled = False
 
     self.workflowWidget.buttonBoxWidget().nextButtonDefaultText = ""
     self.workflowWidget.buttonBoxWidget().backButtonDefaultText = ""
     self.leftFrame.layout().addWidget( self.workflowWidget,3 )
     
+
     # create all wizard steps
     self.loadSceneStep = USGuidedWizard.LoadSceneStep('LoadScene')
     self.loadSceneStep.setModuleLogic(self.moduleLogic)
+    self.loadSceneStep.setButtonBoxWidget(bw)
     self.connectToTrackerStep =  USGuidedWizard.ConnectToTrackerStep('ConnectToTracker')
     self.connectToTrackerStep.setModuleLogic(self.moduleLogic)
+    self.connectToTrackerStep.setButtonBoxWidget(bw)
     self.placeImageFiducialsStep =  USGuidedWizard.PlaceImageFiducialsStep( 'PlaceImageFiducials')
     self.placeImageFiducialsStep.setModuleLogic(self.moduleLogic)
+    self.placeImageFiducialsStep.setButtonBoxWidget(bw)
     self.placeSpatialFiducialsStep =  USGuidedWizard.PlaceSpatialFiducialsStep( 'PlaceSpatialFiducials')
     self.placeSpatialFiducialsStep.setModuleLogic(self.moduleLogic)
+    self.placeSpatialFiducialsStep.setButtonBoxWidget(bw)
     self.registrationStep =  USGuidedWizard.RegistrationStep( 'Registration')
     self.registrationStep.setModuleLogic(self.moduleLogic)
+    self.registrationStep.setButtonBoxWidget(bw)
     self.navigationStep =  USGuidedWizard.NavigationStep( 'Navigation')
     self.navigationStep.setModuleLogic(self.moduleLogic)
+    self.navigationStep.setButtonBoxWidget(bw)
     #self.selectScansStep = USGuidedWizard.ChangeTrackerSelectScansStep( 'SelectScans'  )
     #self.defineROIStep = USGuidedWizard.ChangeTrackerDefineROIStep( 'DefineROI'  )
     #self.segmentROIStep = USGuidedWizard.ChangeTrackerSegmentROIStep( 'SegmentROI'  )
@@ -1178,7 +1220,6 @@ class Slicelet(object):
     self.workflow.start()
     self.workflowWidget.visible = True
     
-    
     if widgetClass:
       self.widget = widgetClass(self.parent)
       self.widget.setup()
@@ -1194,13 +1235,13 @@ class Slicelet(object):
     print("Layout changed") 
     print(argin)
     if argin==0:
-       self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutConventionalView)  
+       self.layoutWidget.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutConventionalView)  
     elif argin==1:  
-       self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUp3DView)
+       self.layoutWidget.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUp3DView)
     elif argin==2:
-       self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutTabbedSliceView)
+       self.layoutWidget.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutTabbedSliceView)
     elif argin==3:
-       self.layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutDual3DView )
+       self.layoutWidget.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutDual3DView )
    
       
  

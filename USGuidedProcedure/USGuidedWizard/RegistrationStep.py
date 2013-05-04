@@ -8,7 +8,7 @@ class RegistrationStep( USGuidedStep ) :
   def __init__( self, stepid ):
     self.initialize( stepid )
     self.setName( '4. Registration' )
-    self.setDescription( 'Registration step' )
+    #self.setDescription( 'Registration step' )
 
     self.__parent = super( RegistrationStep, self )
 

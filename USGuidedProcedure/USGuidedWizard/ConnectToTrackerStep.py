@@ -8,8 +8,9 @@ class ConnectToTrackerStep( USGuidedStep ) :
   def __init__( self, stepid ):
     self.initialize( stepid )
     self.setName( '1. Connect to Tracker' )
-    self.setDescription( 'Connect to the tracker..................................................................................................................' )    
+    #self.setDescription( 'Connect to the tracker...' )    
     self.__parent = super( ConnectToTrackerStep, self )
+    
     self.estado = "Disconnected"
     self.connectorCreated=False
     #self.PlusServerBin = "C:\Users\Usuario\devel\PlusExperimentalBin\bin\Debug"
@@ -62,8 +63,6 @@ class ConnectToTrackerStep( USGuidedStep ) :
     self.ConnectedState=False
     self.DisconnectedState=False
 
-    
-
     qt.QTimer.singleShot(0, self.killButton)
 
   def killButton(self):
@@ -89,7 +88,7 @@ class ConnectToTrackerStep( USGuidedStep ) :
     super(ConnectToTrackerStep, self).onEntry(comingFrom, transitionType)
     #self.updateWidgetFromParameters(self.parameterNode())
     if not self.connectorCreated:
-        self.logic.CreateAndAssociateConectorNodeWithScene()
+        self.logic.createAndAssociateConectorNodeWithScene()
         self.connectorNode = self.logic.getConnectorNode()
         self.connectorNode.AddObserver(self.connectorNode.ConnectedEvent,self.onConnectedEventCaptured)
         self.connectorNode.AddObserver(self.connectorNode.DisconnectedEvent,self.onDisconnectedEventCaptured)
@@ -133,12 +132,12 @@ class ConnectToTrackerStep( USGuidedStep ) :
     if self.estado=="Disconnected":
        print("Trying to connect...")
        print("Status before Connect(): " + str(self.connectorNode.GetState()))
-       self.logic.Connect()
+       self.logic.connectWithTracker()
        self.estado = "Waiting"
        self.statusBar.showMessage(self.estado)
        print("Status After Connect(): " + str(self.connectorNode.GetState()))
     elif (self.estado=="Connected") or (self.estado=="Waiting"):
-       self.logic.Disconnect() 
+       self.logic.stopTracking() 
  
   def onConnectedEventCaptured(self, caller,  event):
       #print("Connected event captured!")

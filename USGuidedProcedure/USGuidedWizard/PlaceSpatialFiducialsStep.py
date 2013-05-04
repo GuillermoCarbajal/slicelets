@@ -11,7 +11,7 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
   def __init__( self, stepid ):
     self.initialize( stepid )
     self.setName( '3. Place spatial Fiducials' )
-    self.setDescription( 'Place fiducials using the tracker' )
+    #self.setDescription( 'Place fiducials using the tracker' )
 
     self.__parent = super( PlaceSpatialFiducialsStep, self )
 
