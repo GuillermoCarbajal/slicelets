@@ -34,7 +34,7 @@ class ModelsViewer():
         self.listWidget.show()
         self.currentItem=None
         
-        self.listWidget.itemDoubleClicked.connect(self.onItemDoubleClicked)  
+        #self.listWidget.itemDoubleClicked.connect(self.onItemDoubleClicked)  
         self.propertiesMenu = PropertiesMenu()
         
         #qt.QObject.connect(self.propertiesMenu,qt.SIGNAL("colorButtonClicked"),self.onColorButtonClicked)
@@ -42,7 +42,17 @@ class ModelsViewer():
         self.propertiesMenu.colourButton.connect("clicked()",self.onColorButtonClicked) 
         self.propertiesMenu.meshOpacitySlider.connect('valueChanged(int)', self.onSliderMoved)
         self.propertiesMenu.checkBoxVisible3D.connect("stateChanged(int)",self.onVisible3DChanged)
+        self.propertiesMenu.checkBoxIntersectionWithUSImage.connect("stateChanged(int)",self.onIntersectionWithUSImageChanged)
         
+        
+        #Actions
+        self.listWidget.setContextMenuPolicy(qt.QActionEvent.ContextMenu)
+        removeAction = qt.QAction("Remove", self.listWidget)
+        removeAction.triggered.connect(self.onRemoveActionTriggered)
+        viewPropertiesAction = qt.QAction("Properties", self.listWidget)
+        viewPropertiesAction.triggered.connect(self.onPropertiesClicked)
+        self.listWidget.addAction(viewPropertiesAction)
+        self.listWidget.addAction(removeAction)
         
     def getListWidget(self):
         return self.listWidget
@@ -81,8 +91,8 @@ class ModelsViewer():
     def addItem(self,item):
         self.listWidget.addItem(item)
         
-    def onItemDoubleClicked(self,item):
-        self.currentItem=item;
+    def onPropertiesClicked(self):
+        self.currentItem = self.listWidget.currentItem()
         # Get the current display node
         node=slicer.util.getNode(self.currentItem.text())
         node=slicer.vtkMRMLModelNode.SafeDownCast(node)
@@ -90,6 +100,8 @@ class ModelsViewer():
         currentOpacity= self.currentDisplayNode.GetOpacity()
         self.propertiesMenu.meshOpacitySlider.setValue(currentOpacity*100)
         isVisible=self.currentDisplayNode.GetVisibility()
+        isIntersectionShown=self.currentDisplayNode.GetSliceIntersectionVisibility()
+        self.propertiesMenu.checkBoxIntersectionWithUSImage.setCheckState(isIntersectionShown)
         self.propertiesMenu.checkBoxVisible3D.setCheckState(isVisible)
         #print item.text()
         self.propertiesMenu.show()
@@ -116,3 +128,16 @@ class ModelsViewer():
     def onVisible3DChanged(self,isVisible):
         #print isVisible
         self.currentDisplayNode.SetVisibility(isVisible)
+        
+    def onIntersectionWithUSImageChanged(self, isIntersectionShown):
+        self.currentDisplayNode.SetSliceIntersectionVisibility(isIntersectionShown)
+        
+    def onRemoveActionTriggered(self):  
+        item = self.listWidget.currentItem()
+        node=slicer.util.getNode(item.text())
+        node=slicer.vtkMRMLModelNode.SafeDownCast(node)
+        currentDisplayNode=node.GetDisplayNode() 
+        slicer.mrmlScene.RemoveNode(currentDisplayNode)
+        slicer.mrmlScene.RemoveNode(node)
+        # Delete the item
+        self.listWidget.takeItem(self.listWidget.row(item))

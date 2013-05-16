@@ -685,7 +685,15 @@ class USGuidedProcedureLogic:
     slicer.mrmlScene.AddNode(volumePropertyNode)
     
     # The volume rendering display node is created
-    vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()
+    vr=slicer.modules.volumerendering
+    vrLogic=vr.logic()
+    defaultRenderingMethod=vrLogic.GetDefaultRenderingMethod()
+    print defaultRenderingMethod
+    if defaultRenderingMethod=='vtkMRMLGPURayCastVolumeRenderingDisplayNode':
+      vrDisplayNode=slicer.vtkMRMLGPURayCastVolumeRenderingDisplayNode()
+    elif defaultRenderingMethod=='vtkMRMLCPURayCastVolumeRenderingDisplayNode':
+      vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()  
+      
     vrDisplayNode.SetAndObserveVolumeNodeID(volumeNode.GetID())
     vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
     slicer.mrmlScene.AddNode(vrDisplayNode)
@@ -1066,7 +1074,7 @@ class Slicelet(object):
     self.layoutSelectorFrame2.layout().addWidget(self.layoutSelector2)
     self.layoutSelector2.connect('activated(int)', self.onLayoutSelect)
     
-    self.resetViewButton = qt.QPushButton("R")
+    self.resetViewButton = qt.QPushButton("Reset")
     self.layoutSelectorFrame2.layout().addWidget(self.resetViewButton)
     self.resetViewButton.connect('clicked()', self.moduleLogic.onResetView)
     
