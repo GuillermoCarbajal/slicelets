@@ -15,13 +15,15 @@ class USGuidedProcedure:
     parent.title = "USGuidedProcedure" # TODO make this more human readable by adding spaces
     parent.categories = ["Testing"]
     parent.dependencies = []
-    parent.contributors = ["Jim Miller (GE)"] # replace with "Firstname Lastname (Org)"
+    parent.contributors = ["""Guillermo Carbajal and Alvaro Gomez (Facultad de Ingenieria,Udelar , Montevideo, Uruguay). 
+                              Andras Lasso and Tamas Ungi (Queen's University, Kingston, Ontario, Canada)."""] 
     parent.helpText = """
     Module to test USGuidedProcedure.
     """
     parent.acknowledgementText = """
-    This file was originally developed by Jim Miller, GE and was partially funded by NIH grant U54EB005149.
-""" # replace with organization, grant and thanks.
+    This file was partially developed by Guillermo Carbajal, Facultad de Ingenieria (Udelar), Montevideo, Uruguay
+     and was partially funded by ANII grant BE_POS_2010_2236.
+    """ # replace with organization, grant and thanks.
     self.parent = parent
     
     # Add this test to the SelfTest module's list for discovery when the module
@@ -99,47 +101,47 @@ class USGuidedProcedureWidget:
     # Connect to Tracker
     sliceletConnectToTracker = qt.QPushButton("Connect to Tracker")
     sliceletConnectToTracker.toolTip = "Connect to tracker through OpenIGTLink"
-    dummyFormLayout.addWidget(sliceletConnectToTracker)
+    #dummyFormLayout.addWidget(sliceletConnectToTracker)
     sliceletConnectToTracker.connect('clicked(bool)', self.onSliceletConnectToTrackerClicked)
     
     # Set up fiducials lists 
     testAnnotationsButton = qt.QPushButton("Test Fiducials lists creation")
     testAnnotationsButton.toolTip = "Test the creation of both lists of fiducials"
-    dummyFormLayout.addWidget(testAnnotationsButton)
+    #dummyFormLayout.addWidget(testAnnotationsButton)
     testAnnotationsButton.connect('clicked(bool)', self.onTestAnnotationsButtonClicked)
     # Load a fiducials lists 
     loadFiducialsListButton = qt.QPushButton("Test image points lists creation")
     loadFiducialsListButton.toolTip = "Load a fiducials list to test registration"
-    dummyFormLayout.addWidget(loadFiducialsListButton)
+    #dummyFormLayout.addWidget(loadFiducialsListButton)
     loadFiducialsListButton.connect('clicked(bool)', self.onLoadFiducialListClicked)
     # Load a tracker list 
     loadTrackerListButton = qt.QPushButton("Test spatial points lists creation")
     loadTrackerListButton.toolTip = "Load spatial points to test registration"
-    dummyFormLayout.addWidget(loadTrackerListButton)
+    #dummyFormLayout.addWidget(loadTrackerListButton)
     loadTrackerListButton.connect('clicked(bool)', self.onLoadSpatialPointsListClicked)
     
     # Place fiducial
     placeFiducialButtom = qt.QPushButton("Place fiducial")
     placeFiducialButtom.toolTip = "Add a fiducial to the list"
-    dummyFormLayout.addWidget(placeFiducialButtom)
+    #dummyFormLayout.addWidget(placeFiducialButtom)
     placeFiducialButtom.connect('clicked(bool)', self.onPlaceFiducialButtomClicked)
     
     # Place Tracker Position
     placeTrackerPositionButton = qt.QPushButton("Add tracker position")
     placeTrackerPositionButton.toolTip = "Add a tracker position to the list"
-    dummyFormLayout.addWidget(placeTrackerPositionButton)
+    #dummyFormLayout.addWidget(placeTrackerPositionButton)
     placeTrackerPositionButton.connect('clicked(bool)', self.onPlaceTrackerPositionButtonClicked)
     
     # Perform registration
     registrationButton = qt.QPushButton("Register")
     registrationButton.toolTip = "Perform registration using the points in the list"
-    dummyFormLayout.addWidget(registrationButton)
+    #dummyFormLayout.addWidget(registrationButton)
     registrationButton.connect('clicked(bool)', self.onRegistrationButtonClicked)
 
     # Show the image in 3D
     showImageButton = qt.QPushButton("Show image in 3D")
     showImageButton.toolTip = "Shows the image in 3D"
-    dummyFormLayout.addWidget(showImageButton)
+    #dummyFormLayout.addWidget(showImageButton)
     showImageButton.connect('clicked(bool)', self.onShowRedSliceButtonClicked)
     
     # Add vertical spacer
@@ -158,11 +160,12 @@ class USGuidedProcedureWidget:
   def onShowSliceletButtonClicked(self):   
     slicelet = USGuidedSliceletTestSlicelet() 
     
-  def onSliceletConnectToTrackerClicked(self):   
-    self.logic.Connect()
+  def onSliceletConnectToTrackerClicked(self):
+    self.logic.createAndAssociateConectorNodeWithScene()  
+    self.logic.connectWithTracker()
     
   def onPlaceFiducialButtomClicked(self):   
-    self.logic.changeMousePlacingState()  
+    self.logic.addFiducialToList("Fiducials List")
     
   def onPlaceTrackerPositionButtonClicked(self):   
     self.logic.recordTrackerPosition()   
@@ -829,184 +832,13 @@ class USGuidedSliceletTestWidget:
   def __init__(self, parent=None):
     self.chartOptions = ("Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev")
     if not parent:
-      self.parent = slicer.qMRMLWidget()
-      self.parent.setLayout(qt.QVBoxLayout())
-      self.parent.setMRMLScene(slicer.mrmlScene)
+      print("There is no parent!")
     else:
       self.parent = parent
-    self.logic = None
-    self.grayscaleNode = None
-    self.labelNode = None
-    self.fileName = None
-    self.fileDialog = None
-    if not parent:
-      self.setup()
-      self.grayscaleSelector.setMRMLScene(slicer.mrmlScene)
-      self.labelSelector.setMRMLScene(slicer.mrmlScene)
-      self.parent.show()
-    
-  def setup(self):
-    #
-    # the grayscale volume selector
-    #
-    self.grayscaleSelectorFrame = qt.QFrame(self.parent)
-    self.grayscaleSelectorFrame.setLayout(qt.QHBoxLayout())
-    #self.parent.layout().addWidget(self.grayscaleSelectorFrame)
+      print("There is parent!")
 
 
 
-    
-    
-
-    
-      
-    
-
-class USGuidedSliceletTestLogic:
-  """Implement the logic to calculate label statistics.
-  Nodes are passed in as arguments.
-  Results are stored as 'statistics' instance variable.
-  """
-  
-  def __init__(self, grayscaleNode, labelNode, fileName=None):
-    #import numpy
-
-    self.keys = ("Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev")
-    cubicMMPerVoxel = reduce(lambda x,y: x*y, labelNode.GetSpacing())
-    ccPerCubicMM = 0.001
-    
-    # TODO: progress and status updates
-    # this->InvokeEvent(vtkUSGuidedSliceletTestLogic::StartLabelStats, (void*)"start label stats")
-    
-    self.labelStats = {}
-    self.labelStats['Labels'] = []
-   
-    stataccum = vtk.vtkImageAccumulate()
-    stataccum.SetInput(labelNode.GetImageData())
-    stataccum.Update()
-    lo = int(stataccum.GetMin()[0])
-    hi = int(stataccum.GetMax()[0])
-
-    for i in xrange(lo,hi+1):
-
-      # this->SetProgress((float)i/hi);
-      # std::string event_message = "Label "; std::stringstream s; s << i; event_message.append(s.str());
-      # this->InvokeEvent(vtkUSGuidedSliceletTestLogic::LabelStatsOuterLoop, (void*)event_message.c_str());
-
-      # logic copied from slicer3 USGuidedSliceletTest
-      # to create the binary volume of the label
-      # //logic copied from slicer2 USGuidedSliceletTest MaskStat
-      # // create the binary volume of the label
-      thresholder = vtk.vtkImageThreshold()
-      thresholder.SetInput(labelNode.GetImageData())
-      thresholder.SetInValue(1)
-      thresholder.SetOutValue(0)
-      thresholder.ReplaceOutOn()
-      thresholder.ThresholdBetween(i,i)
-      thresholder.SetOutputScalarType(grayscaleNode.GetImageData().GetScalarType())
-      thresholder.Update()
-      
-      # this.InvokeEvent(vtkUSGuidedSliceletTestLogic::LabelStatsInnerLoop, (void*)"0.25");
-      
-      #  use vtk's statistics class with the binary labelmap as a stencil
-      stencil = vtk.vtkImageToImageStencil()
-      stencil.SetInput(thresholder.GetOutput())
-      stencil.ThresholdBetween(1, 1)
-      
-      # this.InvokeEvent(vtkUSGuidedSliceletTestLogic::LabelStatsInnerLoop, (void*)"0.5")
-      
-      stat1 = vtk.vtkImageAccumulate()
-      stat1.SetInput(grayscaleNode.GetImageData())
-      stat1.SetStencil(stencil.GetOutput())
-      stat1.Update()
-
-      # this.InvokeEvent(vtkUSGuidedSliceletTestLogic::LabelStatsInnerLoop, (void*)"0.75")
-
-      if stat1.GetVoxelCount() > 0:
-        # add an entry to the LabelStats list
-        self.labelStats["Labels"].append(i)
-        self.labelStats[i,"Index"] = i
-        self.labelStats[i,"Count"] = stat1.GetVoxelCount()
-        self.labelStats[i,"Volume mm^3"] = self.labelStats[i,"Count"] * cubicMMPerVoxel
-        self.labelStats[i,"Volume cc"] = self.labelStats[i,"Volume mm^3"] * ccPerCubicMM
-        self.labelStats[i,"Min"] = stat1.GetMin()[0]
-        self.labelStats[i,"Max"] = stat1.GetMax()[0]
-        self.labelStats[i,"Mean"] = stat1.GetMean()[0]
-        self.labelStats[i,"StdDev"] = stat1.GetStandardDeviation()[0]
-        
-        # this.InvokeEvent(vtkUSGuidedSliceletTestLogic::LabelStatsInnerLoop, (void*)"1")
-
-    # this.InvokeEvent(vtkUSGuidedSliceletTestLogic::EndLabelStats, (void*)"end label stats")
-
-  def createStatsChart(self, labelNode, valueToPlot, ignoreZero=False):
-    """Make a MRML chart of the current stats
-    """
-    layoutNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLLayoutNode')
-    layoutNodes.SetReferenceCount(layoutNodes.GetReferenceCount()-1)
-    layoutNodes.InitTraversal()
-    layoutNode = layoutNodes.GetNextItemAsObject()
-    layoutNode.SetViewArrangement(slicer.vtkMRMLLayoutNode.SlicerLayoutConventionalQuantitativeView)
-
-    chartViewNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLChartViewNode')
-    chartViewNodes.SetReferenceCount(chartViewNodes.GetReferenceCount()-1)
-    chartViewNodes.InitTraversal()
-    chartViewNode = chartViewNodes.GetNextItemAsObject()
-
-    arrayNode = slicer.mrmlScene.AddNode(slicer.vtkMRMLDoubleArrayNode())
-    array = arrayNode.GetArray()
-    samples = len(self.labelStats["Labels"])
-    tuples = samples
-    if ignoreZero and self.labelStats["Labels"].__contains__(0):
-      tuples -= 1
-    array.SetNumberOfTuples(tuples)
-    tuple = 0
-    for i in xrange(samples):
-        index = self.labelStats["Labels"][i]
-        if not (ignoreZero and index == 0):
-          array.SetComponent(tuple, 0, index)
-          array.SetComponent(tuple, 1, self.labelStats[index,valueToPlot])
-          array.SetComponent(tuple, 2, 0)
-          tuple += 1
-
-    chartNode = slicer.mrmlScene.AddNode(slicer.vtkMRMLChartNode())
-    chartNode.AddArray(valueToPlot, arrayNode.GetID())
-
-    chartViewNode.SetChartNodeID(chartNode.GetID())
-
-    chartNode.SetProperty('default', 'title', 'Label Statistics')
-    chartNode.SetProperty('default', 'xAxisLabel', 'Label')
-    chartNode.SetProperty('default', 'yAxisLabel', valueToPlot)
-    chartNode.SetProperty('default', 'type', 'Bar');
-    chartNode.SetProperty('default', 'xAxisType', 'categorical')
-    chartNode.SetProperty('default', 'showLegend', 'off')
-
-    # series level properties
-    if labelNode.GetDisplayNode() != None and labelNode.GetDisplayNode().GetColorNode() != None:
-      chartNode.SetProperty(valueToPlot, 'lookupTable', labelNode.GetDisplayNode().GetColorNodeID());
-
-
-  def statsAsCSV(self):
-    """
-    print comma separated value file with header keys in quotes
-    """
-    csv = ""
-    header = ""
-    for k in self.keys[:-1]:
-      header += "\"%s\"" % k + ","
-    header += "\"%s\"" % self.keys[-1] + "\n"
-    csv = header
-    for i in self.labelStats["Labels"]:
-      line = ""
-      for k in self.keys[:-1]:
-        line += str(self.labelStats[i,k]) + ","
-      line += str(self.labelStats[i,self.keys[-1]]) + "\n"
-      csv += line
-    return csv
-
-  def saveStats(self,fileName):
-    fp = open(fileName, "w")
-    fp.write(self.statsAsCSV())
-    fp.close()
       
 
 class Slicelet(object):
@@ -1230,7 +1062,6 @@ class Slicelet(object):
     
     if widgetClass:
       self.widget = widgetClass(self.parent)
-      self.widget.setup()
     self.parent.show()
     
     #self.moduleLogic = slicer.modules.USGuidedProcedure.logic()
