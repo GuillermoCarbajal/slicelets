@@ -81,6 +81,8 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
     super(PlaceImageFiducialsStep, self).onEntry(comingFrom, transitionType)
     
     self.logic.createRegistrationLists()
+    self.logic.createTargetList()
+     
     self.fiducialsList.listenToListModifications()  
     
     self.updateWidgetFromParameters(self.parameterNode())

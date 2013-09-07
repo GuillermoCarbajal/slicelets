@@ -15,13 +15,15 @@ class NavigationStep( USGuidedStep ) :
     self.igtlRemoteLogic = None
     self.reconstructionSuspended = False
     self.reconstructionStarted = False
+    self.exploreVolume = False
     self.outputVolFilename="PlusServerRecording.mha"
     self.outputVolDeviceName= "recvol_Reference"
     self.liveReconstruction=True
     self.volumesAddedToTheScene=[] #contains the unique ID of the volumes added to the scene 
     self.scalarRange=[0.,255.]
     self.windowLevelMinMax=[0.1,254.99]
-    
+    self.preAcquireVolumeReconstructionSequence=False
+    self.preAcquisitionFilename="preAcquisitionVolume.mha"
     
   def createUserInterface( self ):
     '''
@@ -73,23 +75,51 @@ class NavigationStep( USGuidedStep ) :
     # Volume reconstruction
     
     volumeReconstructionFrame=qt.QFrame()
-    volumeReconstructionFrame.setLayout(qt.QHBoxLayout())
+    volumeReconstructionFrame.setLayout(qt.QVBoxLayout())
     volumeReconstructionLayout=volumeReconstructionFrame.layout()
     
     self.volumeReconstructionLabel = qt.QLabel("Volume reconstruction: ", self.isTrackingFrame)
     self.volumeReconstructionLabel.setToolTip( "Perform volume reconstruction")
     volumeReconstructionFrame.layout().addWidget(self.volumeReconstructionLabel)
+    
+    
+    self.preAcquisitionFrame=qt.QFrame()
+    self.preAcquisitionFrame.setLayout(qt.QHBoxLayout())
+    self.preAcquisitionLayout=self.preAcquisitionFrame.layout()
+    
+    self.isPreAcquisitionLabel = qt.QLabel("Pre Adquisition: ", volumeReconstructionFrame)
+    self.isPreAcquisitionLabel.setToolTip( "Enable/Disable the pre adquisition. It is important to pre adquire a sequence to determine the extent of the volume")
+    self.preAcquisitionLayout.addWidget(self.isPreAcquisitionLabel)
+
+    self.isPreAcquisitionCheckBox = qt.QCheckBox(self.isTrackingFrame)
+    self.isPreAcquisitionCheckBox.setCheckState(0)
+    self.preAcquisitionLayout.addWidget(self.isPreAcquisitionCheckBox)
+    self.isPreAcquisitionCheckBox.connect("stateChanged(int)",self.onPreAcquisitionStateChanged)
+    
+    self.volumeReconstructionButtonsFrame=qt.QFrame()
+    self.volumeReconstructionButtonsFrame.setLayout(qt.QHBoxLayout())
+    self.volumeReconstructionButtonsLayout=self.volumeReconstructionButtonsFrame.layout()
+    
      
     self.startReconstructionButton = qt.QPushButton("Start")
     self.startReconstructionButton.toolTip = "Start/Stop the volume reconstruction"
-    volumeReconstructionLayout.addWidget(self.startReconstructionButton)
+    self.volumeReconstructionButtonsLayout.addWidget(self.startReconstructionButton)
     self.startReconstructionButton.connect('clicked(bool)', self.onStartReconstructionButtonClicked)
     
     self.suspendReconstructionButton = qt.QPushButton("Suspend")
     self.suspendReconstructionButton.toolTip = "Suspend/Resume the volume reconstruction"
     self.suspendReconstructionButton.setEnabled(False)
-    volumeReconstructionLayout.addWidget(self.suspendReconstructionButton)
+    self.volumeReconstructionButtonsLayout.addWidget(self.suspendReconstructionButton)
     self.suspendReconstructionButton.connect('clicked(bool)', self.onSuspendReconstructionButtonClicked)
+    
+    self.exploreVolumeButton = qt.QPushButton("Show volume")
+    self.exploreVolumeButton.toolTip = "Show/Hide the volume reconstruction"
+    self.exploreVolumeButton.setEnabled(False)
+    self.volumeReconstructionButtonsLayout.addWidget(self.exploreVolumeButton)
+    self.exploreVolumeButton.connect('clicked(bool)', self.onExploreVolumeButtonClicked)
+    
+    volumeReconstructionFrame.layout().addWidget(self.preAcquisitionFrame)
+    volumeReconstructionFrame.layout().addWidget(self.volumeReconstructionButtonsFrame)
     
     self.__layout.addWidget(volumeReconstructionFrame)
     
@@ -115,7 +145,6 @@ class NavigationStep( USGuidedStep ) :
     self.logic.showRedSliceIn3D(1)
       
     # If the Target list does not exit, it is created.
-    self.logic.createTargetList()
     self.listenToTargetListModification()
       
     igtlRemote=slicer.modules.openigtlinkremote
@@ -163,37 +192,67 @@ class NavigationStep( USGuidedStep ) :
          
       
   def onStartReconstructionButtonClicked(self):
-    self.reconstructionStarted = not self.reconstructionStarted
-    if self.reconstructionStarted == True:
-       self.logic.startVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode,self.outputVolFilename,self.outputVolDeviceName)
-       self.startReconstructionButton.setText("Stop")
-       self.suspendReconstructionButton.setEnabled(True)
-       #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+    if not self.preAcquireVolumeReconstructionSequence:  
+      self.reconstructionStarted = not self.reconstructionStarted
+      if self.reconstructionStarted == True:
+         self.logic.startVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode,self.outputVolFilename,self.outputVolDeviceName)
+         print("volume reconstruction started!")
+         self.startReconstructionButton.setText("Stop")
+         self.suspendReconstructionButton.setEnabled(True)
+         #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+      else:
+         self.logic.stopVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
+         print("volume reconstruction stopped!")
+         self.startReconstructionButton.setText("Start")   
+         self.suspendReconstructionButton.setEnabled(False)
     else:
-       self.logic.stopVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
-       self.startReconstructionButton.setText("Start")   
-       self.suspendReconstructionButton.setEnabled(False)
-       #node=slicer.vtkMRMLScalarVolumeNode()
-       #node.SetName(self.outputVolDeviceName)
-       #slicer.mrmlScene.AddNode(node)
+      self.reconstructionStarted = not self.reconstructionStarted
+      if self.reconstructionStarted == True:
+         self.logic.startAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename)
+         print("pre acquisition started!")
+         self.startReconstructionButton.setText("Stop")
+         #self.suspendReconstructionButton.setEnabled(True)
+         #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+      else:
+         self.logic.stopAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode)
+         print("pre acquisition stopped!")
+         self.startReconstructionButton.setText("Start")   
+         self.logic.reconstructVolume(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename,self.outputVolFilename,self.outputVolDeviceName)
+         self.exploreVolumeButton.setEnabled(True)
+         #self.suspendReconstructionButton.setEnabled(False) 
+         #node=slicer.vtkMRMLScalarVolumeNode()
+         #node.SetName(self.outputVolDeviceName)
+         #slicer.mrmlScene.AddNode(node)
 
-    #while(not self.reconstructionSuspended):
-    #print("Start sleeping")
-    #time.sleep(5)
-    #print("Finish sleeping")
-    #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+      #while(not self.reconstructionSuspended):
+      #print("Start sleeping")
+      #time.sleep(5)
+      #print("Finish sleeping")
+      #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
         
     
   def onSuspendReconstructionButtonClicked(self):
-    self.reconstructionSuspended = not self.reconstructionSuspended
-    if self.reconstructionSuspended == True:
-       self.logic.suspendVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
-       self.suspendReconstructionButton.setText("Resume")
+    if not self.preAcquireVolumeReconstructionSequence:   
+      self.reconstructionSuspended = not self.reconstructionSuspended
+      if self.reconstructionSuspended == True:
+         self.logic.suspendVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
+         self.suspendReconstructionButton.setText("Resume")
+      else:
+         self.logic.resumeVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
+         self.suspendReconstructionButton.setText("Suspend") 
+       
+  def onExploreVolumeButtonClicked(self):
+    print("Explore volume button clicked")
+    self.exploreVolume = not self.exploreVolume
+    if self.exploreVolume == True:
+      self.logic.disconnectDriverForSlice()
+      self.logic.showReconstructedVolume()
+      self.exploreVolumeButton.setText("Hide Volume")
     else:
-       self.logic.resumeVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
-       self.suspendReconstructionButton.setText("Suspend") 
-       
-       
+      self.logic.showRedSliceIn3D(True)
+      self.exploreVolumeButton.setText("Show Volume")
+        
+            
   def listenToVolumesAdded(self):
     self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onVolumeAdded)
 
@@ -235,4 +294,10 @@ class NavigationStep( USGuidedStep ) :
         else:
             self.logic.stopTracking()
             self.logic.showRedSliceIn3D(False)
+            
+  def onPreAcquisitionStateChanged(self,status):     
+        if status==2:
+            self.preAcquireVolumeReconstructionSequence=True
+        else:
+            self.preAcquireVolumeReconstructionSequence=False         
         

@@ -163,8 +163,10 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
     print("Current row is: " + str(currentRow))
 
     # TODO uncomment this line and comment all the following TODO
-    self.logic.recordTrackerPosition()
+    positionRecorded= self.logic.recordTrackerPosition()
     
+    if positionRecorded==False:
+      return
     ## TODO  get the tracker position
     ## We must have here a node or a nodeID from the tracker points list
     ## For the moment we have a node that has the same position as the fiducial 

@@ -281,13 +281,23 @@ class USGuidedProcedureLogic:
     print("Status after start(): " + str(self.connectorNode.GetState()))
     
     ## The nodes StylusTipToReference and ProbeToReference are added 
-    stylusTipToReference=slicer.vtkMRMLLinearTransformNode()
-    slicer.mrmlScene.AddNode(stylusTipToReference)
-    stylusTipToReference.SetName("StylusTipToReference")
-
-    probeToReference=slicer.vtkMRMLLinearTransformNode()
-    slicer.mrmlScene.AddNode(probeToReference)
-    probeToReference.SetName("ProbeToReference")
+    node = slicer.util.getNode("StylusTipToReference")
+    if node==None:
+      stylusTipToReference=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(stylusTipToReference)
+      stylusTipToReference.SetName("StylusTipToReference")
+    
+    node = slicer.util.getNode("ProbeToReference")
+    if node==None:
+      probeToReference=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(probeToReference)
+      probeToReference.SetName("ProbeToReference")
+      
+    node = slicer.util.getNode("ReferenceToRAS")
+    if node==None:
+      probeToReference=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(probeToReference)
+      probeToReference.SetName("ReferenceToRAS")  
     
   
   def startTracking(self):
@@ -320,11 +330,11 @@ class USGuidedProcedureLogic:
       saml=slicer.modules.annotations.logic()
       #saml.RegisterNodes() 
       parentNode=saml.GetActiveHierarchyNode()
-      
+      #parentNode = slicer.util.getNode("All Annotations")
       # Create the Fiducials List
       self.createAnnotationList("Fiducials List", parentNode)
       # Create the Tracker Points List
-      self.createAnnotationList("Tracker Point List", parentNode)
+      self.createAnnotationList("Tracker Points List", parentNode)
       # Create the Fiducials List used for Registration
       self.createAnnotationList("Fiducials List (for registration)", parentNode)
       # Create the Tracker Points List used for Registration
@@ -332,10 +342,12 @@ class USGuidedProcedureLogic:
       
   def createTargetList(self): 
       # The target list is created in the same level that the registration list   
-      saml=slicer.modules.annotations.logic()
+      #saml=slicer.modules.annotations.logic()
       #saml.RegisterNodes() 
-      activeNode=saml.GetActiveHierarchyNode()
-      parentNode = activeNode.GetParentNode()
+      
+      #activeNode=saml.GetActiveHierarchyNode()
+      parentNode = slicer.util.getNode("All Annotations")
+      #parentNode=saml.GetActiveHierarchyNode()
       self.createAnnotationList("Target List",parentNode)
       
   def createAnnotationList(self,listName,parentNode):
@@ -449,7 +461,6 @@ class USGuidedProcedureLogic:
   
     
   def showRedSliceIn3D(self,isShown):  
-    
     image_RAS=slicer.util.getNode("Image_Reference")  
     redNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
     vrd=slicer.modules.volumereslicedriver
@@ -468,7 +479,47 @@ class USGuidedProcedureLogic:
     sliceLogic.SetName("Red")
     sliceLogic.SetMRMLScene(slicer.mrmlScene)
     #sliceLogic.FitSliceToAll()
-	
+    
+  def disconnectDriverForSlice(self):
+    redNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
+    vrd=slicer.modules.volumereslicedriver
+    vrdl=vrd.logic()
+    vrdl.SetMRMLScene(slicer.mrmlScene)
+    vrdl.SetDriverForSlice("None",redNode)    
+    
+  def showReconstructedVolume(self):  
+    recvol_Reference=slicer.util.getNode("recvol_Reference") 
+    
+    redNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
+    redNode.SetSliceVisible(True)  
+    redWidgetCompNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeRed")
+    redWidgetCompNode.SetBackgroundVolumeID(recvol_Reference.GetID())
+    redNode.SetOrientation("Axial")
+    sliceLogicRed=slicer.vtkMRMLSliceLogic()
+    sliceLogicRed.SetName("Red")
+    sliceLogicRed.SetMRMLScene(slicer.mrmlScene)
+    sliceLogicRed.FitSliceToAll()
+    
+    greenNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
+    greenNode.SetSliceVisible(True)  
+    greenWidgetCompNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeGreen")
+    greenWidgetCompNode.SetBackgroundVolumeID(recvol_Reference.GetID())
+    greenNode.SetOrientation("Coronal")
+    sliceLogicGreen=slicer.vtkMRMLSliceLogic()
+    sliceLogicGreen.SetName("Green")
+    sliceLogicGreen.SetMRMLScene(slicer.mrmlScene)
+    sliceLogicGreen.FitSliceToAll()
+    
+    yellowNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
+    yellowNode.SetSliceVisible(True)  
+    yellowWidgetCompNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeYellow")
+    yellowWidgetCompNode.SetBackgroundVolumeID(recvol_Reference.GetID())
+    yellowNode.SetOrientation("Sagittal")
+    sliceLogicYellow=slicer.vtkMRMLSliceLogic()
+    sliceLogicYellow.SetName("Yellow")
+    sliceLogicYellow.SetMRMLScene(slicer.mrmlScene)
+    sliceLogicYellow.FitSliceToAll()
+    
   def showStylusTipToRAS(self):
     stylusTipToRAS=slicer.util.getNode("StylusTipToRAS")
     igt=slicer.modules.openigtlinkif
@@ -574,18 +625,37 @@ class USGuidedProcedureLogic:
     
     
   def recordTrackerPosition(self):
-    print("Tracker position recorded")
     saml = slicer.modules.annotations.logic() 
     fnode=slicer.util.getNode("Tracker Points List")
-    saml.SetActiveHierarchyNodeID(fnode.GetID())
+    saml.SetActiveHierarchyNodeID(fnode.GetID())  
     StylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
-    cfl=slicer.modules.collectfiducials.logic()
-    cfl.SetProbeTransformNode(StylusTipToReferenceNode)
-    cfl.AddFiducial()      
+    validTransformation=self.isValidTransformation("StylusTipToReference") and self.isValidTransformation("ReferenceToTracker")
+    if validTransformation==True: 
+      cfl=slicer.modules.collectfiducials.logic()
+      cfl.SetProbeTransformNode(StylusTipToReferenceNode)
+      cfl.AddFiducial()
+      print("Tracker position recorded")
+      sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\notify.wav")
+      sound.play()      
+    else:
+      print("Tracker position is invalid")   
+      sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\critico.wav")
+      sound.play()   
+    return validTransformation
     
-  def startVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode,OutputVolFilename,OutputVolDeviceName):
-    igtlRemoteLogic.SendCommand('<Command Name="StartVolumeReconstruction" OutputVolFilename="'+OutputVolFilename+'" OutputVolDeviceName="'+OutputVolDeviceName +'" TrackedVideoDeviceId="TrackedVideoDevice"></Command>',igtlConnectorNode.GetID()) 
+  def startAcquisition(self,igtlRemoteLogic,igtlConnectorNode, OutputFilename):
+    igtlRemoteLogic.SendCommand('<Command Name="StartRecording" OutputFilename="'+OutputFilename+'" CaptureDeviceId="CaptureDevice"></Command>',igtlConnectorNode.GetID())
+     
+  def stopAcquisition(self,igtlRemoteLogic,igtlConnectorNode): 
+    igtlRemoteLogic.SendCommand('<Command Name="StopRecording"  CaptureDeviceId="CaptureDevice"></Command>',igtlConnectorNode.GetID())    
   
+  def reconstructVolume(self,igtlRemoteLogic,igtlConnectorNode,PreAcquisitionFilename,OutputVolFilename,OutputVolDeviceName):
+    igtlRemoteLogic.SendCommand('<Command Name="ReconstructVolume" InputSeqFilename="'+PreAcquisitionFilename+'" OutputVolFilename="'+OutputVolFilename+'" OutputVolDeviceName="'+OutputVolDeviceName+'"></Command>',igtlConnectorNode.GetID())   
+ 
+  def startVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode,OutputVolFilename,OutputVolDeviceName):
+    self.commandID=igtlRemoteLogic.SendCommand('<Command Name="StartVolumeReconstruction" OutputVolFilename="'+OutputVolFilename+'" OutputVolDeviceName="'+OutputVolDeviceName +'" ChannelId="TrackedVideoStream"></Command>',igtlConnectorNode.GetID()) 
+    print "Command ID =" + str(self.commandID)
+    
   def suspendVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode): 
     igtlRemoteLogic.SendCommand('<Command Name="SuspendVolumeReconstruction"></Command>',igtlConnectorNode.GetID())  
     
@@ -593,7 +663,7 @@ class USGuidedProcedureLogic:
     igtlRemoteLogic.SendCommand('<Command Name="ResumeVolumeReconstruction"></Command>',igtlConnectorNode.GetID())   
     
   def stopVolumeReconstruction(self,igtlRemoteLogic,igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="StopVolumeReconstruction"></Command>',igtlConnectorNode.GetID())   
+    igtlRemoteLogic.SendCommand('<Command Name="StopVolumeReconstruction" ReferencedCommandId="'+ str(self.commandID) +'"></Command>',igtlConnectorNode.GetID())   
   
   def getVolumeReconstructionSnapshot(self,igtlRemoteLogic,igtlConnectorNode): 
     igtlRemoteLogic.SendCommand('<Command Name="GetVolumeReconstructionSnapshot"></Command>',igtlConnectorNode.GetID())           
@@ -693,26 +763,67 @@ class USGuidedProcedureLogic:
     defaultRenderingMethod=vrLogic.GetDefaultRenderingMethod()
     print defaultRenderingMethod
     if defaultRenderingMethod=='vtkMRMLGPURayCastVolumeRenderingDisplayNode':
-      vrDisplayNode=slicer.vtkMRMLGPURayCastVolumeRenderingDisplayNode()
+      self.vrDisplayNode=slicer.vtkMRMLGPURayCastVolumeRenderingDisplayNode()
     elif defaultRenderingMethod=='vtkMRMLCPURayCastVolumeRenderingDisplayNode':
-      vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()  
+      self.vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()  
       
-    vrDisplayNode.SetAndObserveVolumeNodeID(volumeNode.GetID())
-    vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
-    slicer.mrmlScene.AddNode(vrDisplayNode)
-    vrDisplayNode.SetVisibility(True)
-    vrDisplayNode.AddObserver("ModifiedEvent",self.onVolumeRenderingModified)  
+    self.vrDisplayNode.SetAndObserveVolumeNodeID(volumeNode.GetID())
+    self.vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
+    slicer.mrmlScene.AddNode(self.vrDisplayNode)
+    self.vrDisplayNode.SetVisibility(True)
+    self.vrDisplayNode.AddObserver("ModifiedEvent",self.onVolumeRenderingModified)  
     
-    vrDisplayNode.Modified()
-    vrDisplayNode.UpdateScene(slicer.mrmlScene)                   
+    self.vrDisplayNode.Modified()
+    self.vrDisplayNode.UpdateScene(slicer.mrmlScene)                   
                         
-                                        
+                                  
+  def showVolumeRendering(self, isShown):
+     self.vrDisplayNode.SetVisibility(isShown)  
+                                           
   def onVolumeModified(self,caller,event):
       print "Volume Modified"
   
   def onVolumeRenderingModified(self,caller,event):
       print "Volume Rendering Modified"      
-                         
+  
+  def isValidTransformation(self, StylusTipToReferenceNode):
+ 
+      StylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
+      transformation=vtk.vtkMatrix4x4()
+      StylusTipToReferenceNode.GetMatrixTransformToWorld(transformation)
+      print "Transformation is: "  
+      print transformation 
+      
+      validTransformation = True
+      a00=transformation.GetElement(0,0)     
+      a01=transformation.GetElement(0,1) 
+      a02=transformation.GetElement(0,2) 
+      a03=transformation.GetElement(0,3)
+      
+      a10=transformation.GetElement(1,0)     
+      a11=transformation.GetElement(1,1) 
+      a12=transformation.GetElement(1,2) 
+      a13=transformation.GetElement(1,3) 
+      
+      a20=transformation.GetElement(2,0)     
+      a21=transformation.GetElement(2,1) 
+      a22=transformation.GetElement(2,2) 
+      a23=transformation.GetElement(2,3)    
+      
+      a30=transformation.GetElement(3,0)     
+      a31=transformation.GetElement(3,1) 
+      a32=transformation.GetElement(3,2) 
+      a33=transformation.GetElement(3,3)   
+      
+      if(a00==1 and a01==0 and a02==0 and a03==0 and 
+         a10==0 and a11==1 and a12==0 and a13==0 and
+         a20==0 and a21==0 and a22==1 and a32==0 and
+         a30==0 and a31==0 and a23==0 and a33==1 ):
+         validTransformation = False   
+      
+      print "Transformation is valid:" + str(validTransformation)  
+      return validTransformation
+                 
                          
   def onResetView(self):
       print "View should be reset!"  

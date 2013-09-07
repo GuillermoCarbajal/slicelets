@@ -88,8 +88,8 @@ class VolumeRenderingViewer():
         self.listWidget.addItem(item)
         
     def onItemDoubleClicked(self,item):
-        vrNode=slicer.util.getNode("CPURayCastVolumeRendering")
-        slicer.mrmlScene.AddNode(vrNode)
+        #vrNode=slicer.util.getNode("CPURayCastVolumeRendering")
+        #slicer.mrmlScene.AddNode(vrNode)
         self.currentItem=item;
         # Get the current display node
         node=slicer.util.getNode(self.currentItem.text())
@@ -125,4 +125,4 @@ class VolumeRenderingViewer():
         
     def onVisible3DChanged(self,isVisible):
         #print isVisible
-        self.currentDisplayNode.SetVisibility(isVisible)
+        self.logic.showVolumeRendering(isVisible)
