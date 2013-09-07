@@ -278,28 +278,79 @@ class USGuidedProcedureLogic:
     print("Status before start(): " + str(self.connectorNode.GetState()))
     self.startTracking()
     print("Connected with Plus Server in Slicelet Class ")
-    print("Status after start(): " + str(self.connectorNode.GetState()))
+    print("Status after start(): " + str(self.connectorNode.GetState()))  
+      
+    #self.associateTransformations()  
+    
+  def associateTransformations(self):
+      
+    referenceToRASNode = slicer.util.getNode("ReferenceToRAS")
+    if referenceToRASNode==None:
+      referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(referenceToRASNode)
+      referenceToRASNode.SetName("ReferenceToRAS")  
     
     ## The nodes StylusTipToReference and ProbeToReference are added 
-    node = slicer.util.getNode("StylusTipToReference")
-    if node==None:
-      stylusTipToReference=slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(stylusTipToReference)
-      stylusTipToReference.SetName("StylusTipToReference")
+    stylusTipToReferenceNode = slicer.util.getNode("StylusTipToReference")
+    if stylusTipToReferenceNode==None:
+      stylusTipToReferenceNode=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(stylusTipToReferenceNode)
+      stylusTipToReferenceNode.SetName("StylusTipToReference")
     
-    node = slicer.util.getNode("ProbeToReference")
-    if node==None:
-      probeToReference=slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(probeToReference)
-      probeToReference.SetName("ProbeToReference")
+    probeToReferenceNode = slicer.util.getNode("ProbeToReference")
+    if probeToReferenceNode==None:
+      probeToReferenceNode=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(probeToReferenceNode)
+      probeToReferenceNode.SetName("ProbeToReference")
       
-    node = slicer.util.getNode("ReferenceToRAS")
-    if node==None:
-      probeToReference=slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(probeToReference)
-      probeToReference.SetName("ReferenceToRAS")  
+    imageToReferenceNode = slicer.util.getNode("ImageToReference")
+    if imageToReferenceNode==None:
+      imageToReferenceNode=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(imageToReferenceNode)
+      imageToReferenceNode.SetName("ImageToReference")  
     
-  
+    imageReferenceNode = slicer.util.getNode("Image_Reference")
+    if imageReferenceNode==None:
+      imageReferenceNode=slicer.vtkMRMLScalarVolumeNode()
+      slicer.mrmlScene.AddNode(imageReferenceNode)
+      imageReferenceNode.SetName("Image_Reference")  
+      
+        
+    #referenceToRASNode=slicer.util.getNode("ReferenceToRAS")           
+         
+    #imageReferenceNode=slicer.util.getNode("Image_Reference")
+    imageReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
+    
+    #imageToReferenceNode=slicer.util.getNode("ImageToReference")
+    imageToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
+    
+    #probeToReferenceNode=slicer.util.getNode("ProbeToReference")
+    probeToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())        
+     
+    stylusModelNode=slicer.util.getNode("Stylus_Example")    
+    if stylusModelNode==None:    
+        #Add the stylus model
+        modelsModule=slicer.modules.models
+        modelsModuleLogic=modelsModule.logic()
+        modelsModuleLogic.SetMRMLScene(slicer.mrmlScene)
+        path=slicer.modules.usguidedprocedure.path
+        modulePath=os.path.dirname(path)
+        stylusModelFile=os.path.join(modulePath,"USGuidedWizard/Stylus_Example.stl")
+        modelsModuleLogic.AddModel(stylusModelFile)
+        stylusModelNode=slicer.util.getNode("Stylus_Example")
+        matrix=vtk.vtkMatrix4x4()
+        matrix.SetElement(0,3,-210)
+        stylusTipToStylusTipModelTransform=slicer.vtkMRMLLinearTransformNode()
+        slicer.mrmlScene.AddNode(stylusTipToStylusTipModelTransform)
+        stylusTipToStylusTipModelTransform.SetAndObserveMatrixTransformToParent(matrix)
+        stylusTipToStylusTipModelTransform.SetName("StylusTipToStylusTipModel")
+        stylusModelNode.SetAndObserveTransformNodeID(stylusTipToStylusTipModelTransform.GetID())
+        ## Associate the model of the stylus with the stylus tip transforms
+        stylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
+        stylusTipToStylusTipModelTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
+        ## Associate the stylus to reference tranform with the reference to RAS
+        stylusTipToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
+        
   def startTracking(self):
       self.connectorNode.Start()
       

@@ -87,43 +87,6 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
     print comingFrom.name()
     qt.QTimer.singleShot(0, self.killButton)
     
-    
-    referenceToRASNode=slicer.util.getNode("ReferenceToRAS")    
-    if referenceToRASNode==None:
-        #After the connection is necessary to add models and transforms that will be used during navigation
-        referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
-        slicer.mrmlScene.AddNode(referenceToRASNode)
-        referenceToRASNode.SetName("ReferenceToRAS")
-         
-         
-    imageReferenceNode=slicer.util.getNode("Image_Reference")
-    imageReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
-        
-        
-     
-    stylusModelNode=slicer.util.getNode("Stylus_Example")    
-    if stylusModelNode==None:    
-        #Add the stylus model
-        modelsModule=slicer.modules.models
-        modelsModuleLogic=modelsModule.logic()
-        modelsModuleLogic.SetMRMLScene(slicer.mrmlScene)
-        path=slicer.modules.usguidedprocedure.path
-        modulePath=os.path.dirname(path)
-        stylusModelFile=os.path.join(modulePath,"USGuidedWizard/Stylus_Example.stl")
-        modelsModuleLogic.AddModel(stylusModelFile)
-        stylusModelNode=slicer.util.getNode("Stylus_Example")
-        matrix=vtk.vtkMatrix4x4()
-        matrix.SetElement(0,3,-210)
-        stylusTipToStylusTipModelTransform=slicer.vtkMRMLLinearTransformNode()
-        slicer.mrmlScene.AddNode(stylusTipToStylusTipModelTransform)
-        stylusTipToStylusTipModelTransform.SetAndObserveMatrixTransformToParent(matrix)
-        stylusTipToStylusTipModelTransform.SetName("StylusTipToStylusTipModel")
-        stylusModelNode.SetAndObserveTransformNodeID(stylusTipToStylusTipModelTransform.GetID())
-        ## Associate the model of the stylus with the stylus tip transforms
-        stylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
-        stylusTipToStylusTipModelTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
-        ## Associate the stylus to reference tranform with the reference to RAS
-        stylusTipToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
 
   def onExit(self, goingTo, transitionType):
     self.doStepProcessing()

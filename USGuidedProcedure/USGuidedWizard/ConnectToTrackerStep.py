@@ -114,6 +114,7 @@ class ConnectToTrackerStep( USGuidedStep ) :
     qt.QTimer.singleShot(0, self.killButton)
 
   def onExit(self, goingTo, transitionType):
+    self.logic.associateTransformations()   
     self.doStepProcessing()
     print("We are in the onExit function of ConnectToTrackerStep")
     super(ConnectToTrackerStep, self).onExit(goingTo, transitionType) 
