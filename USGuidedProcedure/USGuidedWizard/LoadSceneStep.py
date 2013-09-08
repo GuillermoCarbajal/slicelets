@@ -22,11 +22,15 @@ class LoadSceneStep( USGuidedStep ) :
     self.statusFrame = qt.QFrame()
     self.statusFrame.setLayout( qt.QHBoxLayout() )
     
+    self.addDataButton = qt.QPushButton("Add Data")
+    #self.leftFrame.layout().addWidget(self.addDataButton)
+    self.addDataButton.connect("clicked()",slicer.app.ioManager().openAddDataDialog)
 
     # Button to connect
     self.loadSceneButton = qt.QPushButton("Load a scene")
     
     # Add to the widget
+    self.__layout.addWidget(self.addDataButton)
     self.__layout.addWidget(self.loadSceneButton)
     
     # Connections

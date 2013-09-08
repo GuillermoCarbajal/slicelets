@@ -4,6 +4,7 @@ import math
 from __main__ import vtk, qt, ctk, slicer
 from ModelsViewer import *
 from VolumeRenderingViewer import *
+from ToolsViewer import *
 #
 # USGuidedProcedure
 #
@@ -303,6 +304,12 @@ class USGuidedProcedureLogic:
       slicer.mrmlScene.AddNode(probeToReferenceNode)
       probeToReferenceNode.SetName("ProbeToReference")
       
+    referenceToTrackerNode = slicer.util.getNode("ReferenceToTracker")
+    if referenceToTrackerNode==None:
+      referenceToTrackerNode=slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(referenceToTrackerNode)
+      referenceToTrackerNode.SetName("ReferenceToTracker")  
+      
     imageToReferenceNode = slicer.util.getNode("ImageToReference")
     if imageToReferenceNode==None:
       imageToReferenceNode=slicer.vtkMRMLLinearTransformNode()
@@ -325,10 +332,13 @@ class USGuidedProcedureLogic:
     imageToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
     
     #probeToReferenceNode=slicer.util.getNode("ProbeToReference")
-    probeToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())        
+    probeToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())   
+    
+    ## Associate the stylus to reference transform with the reference to RAS
+    stylusTipToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())     
      
-    stylusModelNode=slicer.util.getNode("Stylus_Example")    
-    if stylusModelNode==None:    
+    self.stylusModelNode=slicer.util.getNode("Stylus_Example")    
+    if self.stylusModelNode==None:    
         #Add the stylus model
         modelsModule=slicer.modules.models
         modelsModuleLogic=modelsModule.logic()
@@ -337,19 +347,33 @@ class USGuidedProcedureLogic:
         modulePath=os.path.dirname(path)
         stylusModelFile=os.path.join(modulePath,"USGuidedWizard/Stylus_Example.stl")
         modelsModuleLogic.AddModel(stylusModelFile)
-        stylusModelNode=slicer.util.getNode("Stylus_Example")
-        matrix=vtk.vtkMatrix4x4()
-        matrix.SetElement(0,3,-210)
+        self.stylusModelNode=slicer.util.getNode("Stylus_Example")
+    
+    ## Associate the model of the stylus with the stylus tip transforms
+    stylusTipToStylusTipModelTransform = slicer.util.getNode("StylusTipToStylusTipModel")
+    if stylusTipToStylusTipModelTransform==None:
         stylusTipToStylusTipModelTransform=slicer.vtkMRMLLinearTransformNode()
-        slicer.mrmlScene.AddNode(stylusTipToStylusTipModelTransform)
-        stylusTipToStylusTipModelTransform.SetAndObserveMatrixTransformToParent(matrix)
-        stylusTipToStylusTipModelTransform.SetName("StylusTipToStylusTipModel")
-        stylusModelNode.SetAndObserveTransformNodeID(stylusTipToStylusTipModelTransform.GetID())
-        ## Associate the model of the stylus with the stylus tip transforms
-        stylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
-        stylusTipToStylusTipModelTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
-        ## Associate the stylus to reference tranform with the reference to RAS
-        stylusTipToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
+        slicer.mrmlScene.AddNode(stylusTipToStylusTipModelTransform) 
+        stylusTipToStylusTipModelTransform.SetName("StylusTipToStylusTipModel") 
+       
+       
+       
+    matrix=vtk.vtkMatrix4x4()
+    matrix.SetElement(0,3,-210)
+    stylusTipToStylusTipModelTransform.SetAndObserveMatrixTransformToParent(matrix)
+    self.stylusModelNode.SetAndObserveTransformNodeID(stylusTipToStylusTipModelTransform.GetID())
+    stylusTipToStylusTipModelTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
+
+    
+    
+    
+   
+    
+    
+        
+        
+  def getStylusModel(self):
+      return self.stylusModelNode
         
   def startTracking(self):
       self.connectorNode.Start()
@@ -681,16 +705,23 @@ class USGuidedProcedureLogic:
     saml.SetActiveHierarchyNodeID(fnode.GetID())  
     StylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
     validTransformation=self.isValidTransformation("StylusTipToReference") and self.isValidTransformation("ReferenceToTracker")
+    
+    path=slicer.modules.usguidedprocedure.path
+    modulePath=os.path.dirname(path)
+    
     if validTransformation==True: 
       cfl=slicer.modules.collectfiducials.logic()
       cfl.SetProbeTransformNode(StylusTipToReferenceNode)
       cfl.AddFiducial()
-      print("Tracker position recorded")
-      sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\notify.wav")
+      print("Tracker position recorded")   
+      file=os.path.join(modulePath,"sounds/notify.wav")
+      sound=qt.QSound(file)
       sound.play()      
     else:
-      print("Tracker position is invalid")   
-      sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\critico.wav")
+      print("Tracker position is invalid")  
+      file=os.path.join(modulePath,"sounds/critico.wav") 
+      #sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\critico.wav")
+      sound=qt.QSound(file)
       sound.play()   
     return validTransformation
     
@@ -724,108 +755,119 @@ class USGuidedProcedureLogic:
     vl=vl.logic()  
     self.sceneObserver = vl.AddObserver('ModifiedEvent', self.onVolumeAdded)
     
+  def isAnUltrasoundVolumeGeneratedWithPLUS(self,volumeNode):
+      name=volumeNode.GetName()
+      nameArray=name.split("_")
+      returnValue=False
+      if nameArray.count("Reference")>0:
+          returnValue=True
+      return returnValue  
+    
   def onVolumeAdded(self,volumeNode):  
     print("A volume was added!!")
-    volumeNode.AddObserver("ModifiedEvent",self.onVolumeModified)      
     
-    '''
-    It is assumed that the volume was created with respect to the Reference
-    The matrix associated with the volume must have the following structure
-    sx 0  0  ox
-    0  sy 0  oy
-    0  0  sz oz
-    with sx, sy, and sz >0
-    This is checked and if it is not true is modified.
-    By default Slicer add a volume with a ijkToRas matrix of the form:
-    -1    0    0
-    0    -1    0
-    0     0    1
-    In this case we want a ijkToRAS matrix equal to identity because we want to place the
-    volume with respect to the Reference.
-    ReferenceToRAS matrix is calculated during registration
-    '''
     
-    matrix=vtk.vtkMatrix4x4()
-    volumeNode.GetIJKToRASMatrix(matrix) 
-    print matrix
-    sx = matrix.GetElement(0,0)
-    if (sx<0):
-        ox=matrix.GetElement(0,3)
-        matrix.SetElement(0,0,-sx)
-        matrix.SetElement(0,3,-ox)
-    sy = matrix.GetElement(1,1)
-    if (sy<0):
-        oy=matrix.GetElement(1,3)
-        matrix.SetElement(1,1,-sy)
-        matrix.SetElement(1,3,-oy)    
-    volumeNode.SetIJKToRASMatrix(matrix)
-    print matrix
+    if self.isAnUltrasoundVolumeGeneratedWithPLUS(volumeNode)==True:
+      volumeNode.AddObserver("ModifiedEvent", self.onVolumeModified)      
     
-    # Volumes are placed under the Reference coordinate system
-    referenceToRASNode=slicer.util.getNode("ReferenceToRAS")
-    if referenceToRASNode==None:
-        referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
+      '''
+      It is assumed that the volume was created with respect to the Reference
+      The matrix associated with the volume must have the following structure
+      sx 0  0  ox
+      0  sy 0  oy
+      0  0  sz oz
+      with sx, sy, and sz >0
+      This is checked and if it is not true is modified.
+      By default Slicer add a volume with a ijkToRas matrix of the form:
+      -1    0    0
+      0    -1    0
+      0     0    1
+      In this case we want a ijkToRAS matrix equal to identity because we want to place the
+      volume with respect to the Reference.
+      ReferenceToRAS matrix is calculated during registration
+      '''
+    
+      matrix = vtk.vtkMatrix4x4()
+      volumeNode.GetIJKToRASMatrix(matrix) 
+      print matrix
+      sx = matrix.GetElement(0, 0)
+      if (sx < 0):
+        ox = matrix.GetElement(0, 3)
+        matrix.SetElement(0, 0, -sx)
+        matrix.SetElement(0, 3, -ox)
+      sy = matrix.GetElement(1, 1)
+      if (sy < 0):
+        oy = matrix.GetElement(1, 3)
+        matrix.SetElement(1, 1, -sy)
+        matrix.SetElement(1, 3, -oy)    
+      volumeNode.SetIJKToRASMatrix(matrix)
+      print matrix
+    
+      # Volumes are placed under the Reference coordinate system
+      referenceToRASNode = slicer.util.getNode("ReferenceToRAS")
+      if referenceToRASNode == None:
+        referenceToRASNode = slicer.vtkMRMLLinearTransformNode()
         slicer.mrmlScene.AddNode(referenceToRASNode)
         referenceToRASNode.SetName("ReferenceToRAS")
     
-    volumeNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID()) 
-    volumeNode.SetDisplayVisibility(True)
+      volumeNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID()) 
+      volumeNode.SetDisplayVisibility(True)
     
-    volumePropertyNode=slicer.vtkMRMLVolumePropertyNode()
-    slicer.mrmlScene.RegisterNodeClass(volumePropertyNode);
+      volumePropertyNode = slicer.vtkMRMLVolumePropertyNode()
+      slicer.mrmlScene.RegisterNodeClass(volumePropertyNode);
 
-    # the scalar opacity mapping function is configured
-    # it is a ramp with opacity of 0 equal to zero and opacity of 1 equal to 1. 
-    scalarOpacity = vtk.vtkPiecewiseFunction()
-    scalarOpacity.AddPoint(self.scalarRange[0],0.)
-    scalarOpacity.AddPoint(self.windowLevelMinMax[0],0.)
-    scalarOpacity.AddPoint(self.windowLevelMinMax[1],1.)
-    scalarOpacity.AddPoint(self.scalarRange[1],1.)
+      # the scalar opacity mapping function is configured
+      # it is a ramp with opacity of 0 equal to zero and opacity of 1 equal to 1. 
+      scalarOpacity = vtk.vtkPiecewiseFunction()
+      scalarOpacity.AddPoint(self.scalarRange[0], 0.)
+      scalarOpacity.AddPoint(self.windowLevelMinMax[0], 0.)
+      scalarOpacity.AddPoint(self.windowLevelMinMax[1], 1.)
+      scalarOpacity.AddPoint(self.scalarRange[1], 1.)
 
-    volumePropertyNode.SetScalarOpacity(scalarOpacity);
+      volumePropertyNode.SetScalarOpacity(scalarOpacity);
     
-    # the color function is configured
-    # zero is associated to the scalar zero and 1 to the scalar 255
-    colorTransfer = vtk.vtkColorTransferFunction()
-    black=[0., 0., 0.]
-    white=[1.,1.,1.]
-    colorTransfer.AddRGBPoint(self.scalarRange[0],black[0],black[1],black[2])
-    colorTransfer.AddRGBPoint(self.windowLevelMinMax[0], black[0], black[1], black[2])
-    colorTransfer.AddRGBPoint(self.windowLevelMinMax[1], white[0], white[1], white[2]);
-    colorTransfer.AddRGBPoint(self.scalarRange[1], white[0], white[1], white[2]);
+      # the color function is configured
+      # zero is associated to the scalar zero and 1 to the scalar 255
+      colorTransfer = vtk.vtkColorTransferFunction()
+      black = [0., 0., 0.]
+      white = [1., 1., 1.]
+      colorTransfer.AddRGBPoint(self.scalarRange[0], black[0], black[1], black[2])
+      colorTransfer.AddRGBPoint(self.windowLevelMinMax[0], black[0], black[1], black[2])
+      colorTransfer.AddRGBPoint(self.windowLevelMinMax[1], white[0], white[1], white[2]);
+      colorTransfer.AddRGBPoint(self.scalarRange[1], white[0], white[1], white[2]);
     
-    volumePropertyNode.SetColor(colorTransfer)
+      volumePropertyNode.SetColor(colorTransfer)
     
     
-    vtkVolumeProperty=volumePropertyNode.GetVolumeProperty()
+      vtkVolumeProperty = volumePropertyNode.GetVolumeProperty()
     
-    vtkVolumeProperty.SetInterpolationTypeToNearest();
-    vtkVolumeProperty.ShadeOn();
-    vtkVolumeProperty.SetAmbient(0.30);
-    vtkVolumeProperty.SetDiffuse(0.60);
-    vtkVolumeProperty.SetSpecular(0.50);
-    vtkVolumeProperty.SetSpecularPower(40);
+      vtkVolumeProperty.SetInterpolationTypeToNearest();
+      vtkVolumeProperty.ShadeOn();
+      vtkVolumeProperty.SetAmbient(0.30);
+      vtkVolumeProperty.SetDiffuse(0.60);
+      vtkVolumeProperty.SetSpecular(0.50);
+      vtkVolumeProperty.SetSpecularPower(40);
     
-    slicer.mrmlScene.AddNode(volumePropertyNode)
+      slicer.mrmlScene.AddNode(volumePropertyNode)
     
-    # The volume rendering display node is created
-    vr=slicer.modules.volumerendering
-    vrLogic=vr.logic()
-    defaultRenderingMethod=vrLogic.GetDefaultRenderingMethod()
-    print defaultRenderingMethod
-    if defaultRenderingMethod=='vtkMRMLGPURayCastVolumeRenderingDisplayNode':
-      self.vrDisplayNode=slicer.vtkMRMLGPURayCastVolumeRenderingDisplayNode()
-    elif defaultRenderingMethod=='vtkMRMLCPURayCastVolumeRenderingDisplayNode':
-      self.vrDisplayNode=slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()  
+      # The volume rendering display node is created
+      vr = slicer.modules.volumerendering
+      vrLogic = vr.logic()
+      defaultRenderingMethod = vrLogic.GetDefaultRenderingMethod()
+      print defaultRenderingMethod
+      if defaultRenderingMethod == 'vtkMRMLGPURayCastVolumeRenderingDisplayNode':
+        self.vrDisplayNode = slicer.vtkMRMLGPURayCastVolumeRenderingDisplayNode()
+      elif defaultRenderingMethod == 'vtkMRMLCPURayCastVolumeRenderingDisplayNode':
+        self.vrDisplayNode = slicer.vtkMRMLCPURayCastVolumeRenderingDisplayNode()  
       
-    self.vrDisplayNode.SetAndObserveVolumeNodeID(volumeNode.GetID())
-    self.vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
-    slicer.mrmlScene.AddNode(self.vrDisplayNode)
-    self.vrDisplayNode.SetVisibility(True)
-    self.vrDisplayNode.AddObserver("ModifiedEvent",self.onVolumeRenderingModified)  
+      self.vrDisplayNode.SetAndObserveVolumeNodeID(volumeNode.GetID())
+      self.vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
+      slicer.mrmlScene.AddNode(self.vrDisplayNode)
+      self.vrDisplayNode.SetVisibility(True)
+      self.vrDisplayNode.AddObserver("ModifiedEvent", self.onVolumeRenderingModified)  
     
-    self.vrDisplayNode.Modified()
-    self.vrDisplayNode.UpdateScene(slicer.mrmlScene)                   
+      self.vrDisplayNode.Modified()
+      self.vrDisplayNode.UpdateScene(slicer.mrmlScene)                   
                         
                                   
   def showVolumeRendering(self, isShown):
@@ -837,13 +879,13 @@ class USGuidedProcedureLogic:
   def onVolumeRenderingModified(self,caller,event):
       print "Volume Rendering Modified"      
   
-  def isValidTransformation(self, StylusTipToReferenceNode):
+  def isValidTransformation(self, transformationNodeName):
  
-      StylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
+      transformationNode=slicer.util.getNode(transformationNodeName)
       transformation=vtk.vtkMatrix4x4()
-      StylusTipToReferenceNode.GetMatrixTransformToWorld(transformation)
-      print "Transformation is: "  
-      print transformation 
+      transformationNode.GetMatrixTransformToWorld(transformation)
+      #print "Transformation is: "  
+      #print transformation 
       
       validTransformation = True
       a00=transformation.GetElement(0,0)     
@@ -872,7 +914,7 @@ class USGuidedProcedureLogic:
          a30==0 and a31==0 and a23==0 and a33==1 ):
          validTransformation = False   
       
-      print "Transformation is valid:" + str(validTransformation)  
+      #print "Transformation is valid:" + str(validTransformation)  
       return validTransformation
                  
                          
@@ -896,6 +938,27 @@ class USGuidedProcedureLogic:
          glCamera2.SetPosition(0,500,0)   
          glCamera2.SetViewAngle(30)   
          glCamera2.SetViewUp(0,0,1)       
+         
+         
+  def startPlusServer(self):
+    self.PlusExecutable = "C:/Users/Usuario/devel/PlusExperimentalBin/bin/Debug/PlusServer.exe"
+    self.ConfigFile = "D:/data/USGuidedProcedure/recordedData/BluePhantom_LAxis_PlusServerTrunk_config.xml"
+    command=self.PlusExecutable
+    command+=" --config-file="+self.ConfigFile
+    command+=" --running-time=12345"
+    command+=" --verbose=3"
+    from subprocess import Popen
+    p = Popen(command)     
+    
+  def crosshairDisable(self):   
+      crosshairNode=slicer.util.getNode("Crosshair")
+      crosshairNode.NavigationOff()
+      crosshairNode.SetCrosshairMode(0)
+      
+  def crosshairEnable(self):   
+      crosshairNode=slicer.util.getNode("Crosshair")
+      crosshairNode.SetCrosshairMode(1) 
+      crosshairNode.NavigationOn()   
            
 class USGuidedProcedureTest(unittest.TestCase):
   """
@@ -1040,9 +1103,10 @@ class Slicelet(object):
     
     self.parent.layout().addWidget(self.leftFrame,1)
     
-    self.addDataButton = qt.QPushButton("Add Data")
-    self.leftFrame.layout().addWidget(self.addDataButton)
-    self.addDataButton.connect("clicked()",slicer.app.ioManager().openAddDataDialog)
+    
+    #self.addDataButton = qt.QPushButton("Add Data")
+    #self.leftFrame.layout().addWidget(self.addDataButton)
+    #self.addDataButton.connect("clicked()",slicer.app.ioManager().openAddDataDialog)
     
     self.saveSceneButton = qt.QPushButton("Save Data")
     self.leftFrame.layout().addWidget(self.saveSceneButton)
@@ -1094,10 +1158,17 @@ class Slicelet(object):
     self.volumeRenderingViewer = VolumeRenderingViewer()
     self.volumeRenderingViewer.setModuleLogic(self.moduleLogic)
     self.volumeRenderingViewer.listenToScene()
+    self.toolsViewer = ToolsViewer()
+    self.toolsViewer.setModuleLogic(self.moduleLogic)
+    #self.toolsViewer.listenToScene()
+    
+    
     #item=qt.QListWidgetItem("unItem")
     #self.modelsViewer.addItem(item)
+    
     self.leftFrame.layout().addWidget(self.modelsViewer.getListWidget(),1)
     self.leftFrame.layout().addWidget(self.volumeRenderingViewer.getListWidget(),1)
+    self.leftFrame.layout().addWidget(self.toolsViewer.getToolsWidget(),1)
     '''
     Create and start the USGuided workflow.
     '''
@@ -1115,7 +1186,7 @@ class Slicelet(object):
 
     self.workflowWidget.buttonBoxWidget().nextButtonDefaultText = ""
     self.workflowWidget.buttonBoxWidget().backButtonDefaultText = ""
-    self.leftFrame.layout().addWidget( self.workflowWidget,3 )
+    self.leftFrame.layout().addWidget( self.workflowWidget,4 )
     
 
     # create all wizard steps
@@ -1125,6 +1196,7 @@ class Slicelet(object):
     self.connectToTrackerStep =  USGuidedWizard.ConnectToTrackerStep('ConnectToTracker')
     self.connectToTrackerStep.setModuleLogic(self.moduleLogic)
     self.connectToTrackerStep.setButtonBoxWidget(bw)
+    self.connectToTrackerStep.setToolsViewer(self.toolsViewer)
     self.placeImageFiducialsStep =  USGuidedWizard.PlaceImageFiducialsStep( 'PlaceImageFiducials')
     self.placeImageFiducialsStep.setModuleLogic(self.moduleLogic)
     self.placeImageFiducialsStep.setButtonBoxWidget(bw)

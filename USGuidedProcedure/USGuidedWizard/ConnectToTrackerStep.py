@@ -13,22 +13,10 @@ class ConnectToTrackerStep( USGuidedStep ) :
     
     self.estado = "Disconnected"
     self.connectorCreated=False
-    #self.PlusServerBin = "C:\Users\Usuario\devel\PlusExperimentalBin\bin\Debug"
-    #self.ConfigFile = "D:\data\USGuidedProcedure\recordedData\BluePhantom_LAxis_PlusServerTrunk_config.xml"
-    #import subprocess
-    #params=[r"C:\Users\Usuario\devel\PlusExperimentalBin\bin\Debug/PlusServer.exe",]
-    #print subprocess.list2cmdline(r"C:")
-    #print subprocess.list2cmdline(r"pause")
-    
-    #from subprocess import Popen
-    #p = Popen("runPlusServerOpenIGTLinkRemote.bat", cwd=r"D:\data\USGuidedProcedure\recordedData")
-    #stdout, stderr = p.communicate()
+   
+    #p = Popen(r"C:/Users/Usuario/devel/PlusExperimentalBin/bin/Debug/PlusServer.exe --config-file=D:/data/USGuidedProcedure/recordedData/BluePhantom_LAxis_PlusServerTrunk_config.xml --running-time=12345 --verbose=3")
 
-    #cimport os
-    #os.startfile("D:/data/USGuidedProcedure/recordedData/runPlusServerOpenIGTLinkRemote.bat")
-    #os.system("C:")
-    #os.system("cd "+self.PlusServerBin)
-    #os.system("PlusServer.exe --config-file="+self.ConfigFile+" --running-time=12345 --verbose=3")
+    
     
   def createUserInterface( self ):
     '''
@@ -115,6 +103,7 @@ class ConnectToTrackerStep( USGuidedStep ) :
 
   def onExit(self, goingTo, transitionType):
     self.logic.associateTransformations()   
+    self.toolsViewer.startListeningToTransformationsModifications()
     self.doStepProcessing()
     print("We are in the onExit function of ConnectToTrackerStep")
     super(ConnectToTrackerStep, self).onExit(goingTo, transitionType) 
@@ -167,4 +156,8 @@ class ConnectToTrackerStep( USGuidedStep ) :
           self.DisconnectedState=True
       else:
           self.DisconnectedState=False
+          
+  def setToolsViewer(self,toolsViewer):
+      self.toolsViewer=toolsViewer
+               
           
