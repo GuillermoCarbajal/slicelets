@@ -9,7 +9,7 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
 
   def __init__( self, stepid ):
     self.initialize( stepid )
-    self.setName( '2. PlaceImageFiducials' )
+    self.setName( '1. PlaceImageFiducials' )
     #self.setDescription( 'Place fiducials in the image' )
   
     self.__parent = super( PlaceImageFiducialsStep, self )

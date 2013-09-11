@@ -7,7 +7,7 @@ class ConnectToTrackerStep( USGuidedStep ) :
 
   def __init__( self, stepid ):
     self.initialize( stepid )
-    self.setName( '1. Connect to Tracker' )
+    self.setName( '2. Connect to Tracker' )
     #self.setDescription( 'Connect to the tracker...' )    
     self.__parent = super( ConnectToTrackerStep, self )
     

@@ -1215,8 +1215,8 @@ class Slicelet(object):
     allSteps = []
 
     allSteps.append( self.loadSceneStep )
-    allSteps.append( self.connectToTrackerStep )
     allSteps.append( self.placeImageFiducialsStep )
+    allSteps.append( self.connectToTrackerStep )
     allSteps.append( self.placeSpatialFiducialsStep )
     allSteps.append( self.registrationStep )
     allSteps.append( self.navigationStep )
@@ -1227,9 +1227,9 @@ class Slicelet(object):
     #allSteps.append( self.reportROIStep )
 
     # Add transition for the first step which let's the user choose between simple and advanced mode
-    self.workflow.addTransition( self.loadSceneStep, self.connectToTrackerStep )
-    self.workflow.addTransition( self.connectToTrackerStep, self.placeImageFiducialsStep )
-    self.workflow.addTransition( self.placeImageFiducialsStep, self.placeSpatialFiducialsStep )
+    self.workflow.addTransition( self.loadSceneStep, self.placeImageFiducialsStep )
+    self.workflow.addTransition( self.placeImageFiducialsStep, self.connectToTrackerStep  )
+    self.workflow.addTransition( self.connectToTrackerStep, self.placeSpatialFiducialsStep )
     self.workflow.addTransition( self.placeSpatialFiducialsStep, self.registrationStep )
     self.workflow.addTransition( self.registrationStep, self.navigationStep )
     #self.workflow.addTransition( self.placeImageFiducials, self.selectScansStep )  
