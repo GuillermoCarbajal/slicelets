@@ -2,6 +2,7 @@ from __main__ import qt, ctk
 
 from USGuidedStep import *
 from Helper import *
+from WorkInProgress import *
 
 class NavigationStep( USGuidedStep ) :
 
@@ -11,19 +12,19 @@ class NavigationStep( USGuidedStep ) :
     #self.setDescription( 'Navigation step' )
    
     self.__parent = super( NavigationStep, self )
-    self.igtlConnectorNode = None
+    #self.igtlConnectorNode = None
     self.igtlRemoteLogic = None
     self.reconstructionSuspended = False
     self.reconstructionStarted = False
     self.exploreVolume = False
-    self.outputVolFilename="PlusServerRecording.mha"
+    self.outputVolFilename="recvol_Reference.mha"
     self.outputVolDeviceName= "recvol_Reference"
     self.liveReconstruction=True
     self.volumesAddedToTheScene=[] #contains the unique ID of the volumes added to the scene 
     self.scalarRange=[0.,255.]
     self.windowLevelMinMax=[0.1,254.99]
-    self.preAcquireVolumeReconstructionSequence=False
-    self.preAcquisitionFilename="preAcquisitionVolume.mha"
+    self.preAcquireVolumeReconstructionSequence=True
+    self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction.mha"
     
   def createUserInterface( self ):
     '''
@@ -118,7 +119,7 @@ class NavigationStep( USGuidedStep ) :
     self.volumeReconstructionButtonsLayout.addWidget(self.exploreVolumeButton)
     self.exploreVolumeButton.connect('clicked(bool)', self.onExploreVolumeButtonClicked)
     
-    volumeReconstructionFrame.layout().addWidget(self.preAcquisitionFrame)
+    #volumeReconstructionFrame.layout().addWidget(self.preAcquisitionFrame)
     volumeReconstructionFrame.layout().addWidget(self.volumeReconstructionButtonsFrame)
     
     self.__layout.addWidget(volumeReconstructionFrame)
@@ -150,7 +151,7 @@ class NavigationStep( USGuidedStep ) :
     igtlRemote=slicer.modules.openigtlinkremote
     self.igtlRemoteLogic=igtlRemote.logic() 
     self.igtlRemoteLogic.SetMRMLScene(slicer.mrmlScene)
-    self.igtlConnectorNode = slicer.util.getNode("Plus Server Connection")  
+    self.igtlConnectorNode = self.logic.getConnectorNode() #slicer.util.getNode("Plus Server Connection")  
     
     super(NavigationStep, self).onEntry(comingFrom, transitionType)
     
@@ -211,6 +212,7 @@ class NavigationStep( USGuidedStep ) :
          self.logic.startAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename)
          print("pre acquisition started!")
          self.startReconstructionButton.setText("Stop")
+         self.exploreVolumeButton.setEnabled(False)
          #self.suspendReconstructionButton.setEnabled(True)
          #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
       else:
@@ -218,7 +220,8 @@ class NavigationStep( USGuidedStep ) :
          print("pre acquisition stopped!")
          self.startReconstructionButton.setText("Start")   
          self.logic.reconstructVolume(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename,self.outputVolFilename,self.outputVolDeviceName)
-         self.exploreVolumeButton.setEnabled(True)
+         self.pbarwin = AddProgresWin()
+         self.pbarwin.show()
          #self.suspendReconstructionButton.setEnabled(False) 
          #node=slicer.vtkMRMLScalarVolumeNode()
          #node.SetName(self.outputVolDeviceName)
@@ -266,6 +269,8 @@ class NavigationStep( USGuidedStep ) :
          vl=slicer.modules.volumes
          vl=vl.logic()
          vl.Modified()
+         self.exploreVolumeButton.setEnabled(True)
+         self.pbarwin.hide()
          
   def onAddTargetButtonClicked(self):   
       self.logic.addFiducialToList("Target List")   

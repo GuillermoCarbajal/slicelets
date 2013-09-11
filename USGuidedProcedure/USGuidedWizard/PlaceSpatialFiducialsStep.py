@@ -124,52 +124,56 @@ class PlaceSpatialFiducialsStep( USGuidedStep ) :
 
     currentRow = self.fiducialsWidget.fiducialsList.currentRow()
     print("Current row is: " + str(currentRow))
-
-    # TODO uncomment this line and comment all the following TODO
-    positionRecorded= self.logic.recordTrackerPosition()
     
-    if positionRecorded==False:
-      return
-    ## TODO  get the tracker position
-    ## We must have here a node or a nodeID from the tracker points list
-    ## For the moment we have a node that has the same position as the fiducial 
+    if currentRow==-1:
+        ret=qt.QMessageBox.warning(self.fiducialsWidget, 'Fiducials List', 'You must select an image fiducials to match with the tracker position.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
+        return
+    
     fiducialListNode=slicer.util.getNode("Fiducials List")
-    #trackerListNode=slicer.util.getNode("Tracker Points List")
-    #saml = slicer.modules.annotations.logic() 
-    #saml.SetActiveHierarchyNodeID(trackerListNode.GetID())
+
+    # TODO uncomment this line and comment all the following TOD
     
     fidHierarchyNode=fiducialListNode.GetNthChildNode(currentRow)
-    fidNode=fidHierarchyNode.GetAssociatedNode()        
-    #fidPos=[0,0,0]
-    #dummy=fidNode.GetFiducialCoordinates(fidPos)
+    fidNode=fidHierarchyNode.GetAssociatedNode()   
+    
     fidName = fidNode.GetName()
-    fidID = fidNode.GetID()
-    
-    #trackerNode=slicer.vtkMRMLAnnotationFiducialNode()
-    #trackerNode.SetFiducialWorldCoordinates(fidPos)
-    #trackerNode.SetName(fidName + '-Tracker')	
-    #slicer.mrmlScene.AddNode(trackerNode)
-    # TODO  get the tracker position (end)
-    
-    #get the most recent node (the last) in the Tracker Points List
-    trackerNode = self.logic.getFiducialNode('Tracker Points List', -1)
-    trackerNode.SetName(fidName + '-Tracker')
     
     
-    # Associate the fiducial and the tracker position
-    # We remove the previous (if exist) tracker node 
-    # and we put the new tracker node ID in the table and check the row
-    previousTrackerID = self.fiducialsWidget.fiducialsList.item(currentRow, 4).text()
-    previousTrackerNode = slicer.mrmlScene.GetNodeByID(previousTrackerID)
-    if  previousTrackerNode:
-      logic = slicer.modules.annotations.logic()
-      logic.RemoveAnnotationNode(previousTrackerNode)
     
-    self.fiducialsWidget.fiducialsList.item(currentRow, 3).setText(trackerNode.GetName())
-    self.fiducialsWidget.fiducialsList.item(currentRow, 4).setText(trackerNode.GetID())
-    self.fiducialsWidget.fiducialsList.item(currentRow, 0).setCheckState(2)
+    positionRecorded= self.logic.recordTrackerPosition()
+    
+    path=slicer.modules.usguidedprocedure.path
+    modulePath=os.path.dirname(path)
+    
+    if positionRecorded==True:
+        #get the most recent node (the last) in the Tracker Points List
+        trackerNode = self.logic.getFiducialNode('Tracker Points List', -1)
+        trackerNode.SetName(fidName + '-Tracker')
+    
+    
+        # Associate the fiducial and the tracker position
+        # We remove the previous (if exist) tracker node 
+        # and we put the new tracker node ID in the table and check the row
+        previousTrackerID = self.fiducialsWidget.fiducialsList.item(currentRow, 4).text()
+        previousTrackerNode = slicer.mrmlScene.GetNodeByID(previousTrackerID)
+        if  previousTrackerNode:
+            logic = slicer.modules.annotations.logic()
+            logic.RemoveAnnotationNode(previousTrackerNode)
+    
+        self.fiducialsWidget.fiducialsList.item(currentRow, 3).setText(trackerNode.GetName())
+        self.fiducialsWidget.fiducialsList.item(currentRow, 4).setText(trackerNode.GetID())
+        self.fiducialsWidget.fiducialsList.item(currentRow, 0).setCheckState(2)
+      
+        soundFile=os.path.join(modulePath,"sounds/notify.wav")
+        sound=qt.QSound(soundFile)
+        sound.play()    
+    else:
+        soundFile=os.path.join(modulePath,"sounds/critico.wav") 
+        #sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\critico.wav")
+        sound=qt.QSound(soundFile)
+        sound.play()   
 
-
+      
   def updateTrackerPointsList(self):
     #clear list
     #self.fiducialsWidget.fiducialsList.clear()

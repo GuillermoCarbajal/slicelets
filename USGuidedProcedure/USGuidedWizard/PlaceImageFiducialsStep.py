@@ -85,6 +85,9 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
      
     self.fiducialsList.listenToListModifications()  
     
+    #self.logic.crosshairEnable()
+    
+    
     self.updateWidgetFromParameters(self.parameterNode())
     pNode = self.parameterNode()
     pNode.SetParameter('currentStep', self.stepid)
@@ -102,8 +105,10 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
 
   def onExit(self, goingTo, transitionType):
     self.doStepProcessing()
-    
     super(PlaceImageFiducialsStep, self).onExit(goingTo, transitionType) 
+    #crosshairNode=slicer.util.getNode("Crosshair")
+    #crosshairNode.SetCrosshairMode(1) 
+    #self.logic.crosshairDisable()
     print("We are in the onExit function of PlaceImageFiducialsStep")
     
   def updateWidgetFromParameters(self, parameterNode):

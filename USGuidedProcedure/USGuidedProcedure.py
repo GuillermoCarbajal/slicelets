@@ -349,20 +349,22 @@ class USGuidedProcedureLogic:
         modelsModuleLogic.AddModel(stylusModelFile)
         self.stylusModelNode=slicer.util.getNode("Stylus_Example")
     
+    self.stylusModelNode.RemoveAllNodeReferenceIDs("transform")
+  
     ## Associate the model of the stylus with the stylus tip transforms
-    stylusTipToStylusTipModelTransform = slicer.util.getNode("StylusTipToStylusTipModel")
-    if stylusTipToStylusTipModelTransform==None:
-        stylusTipToStylusTipModelTransform=slicer.vtkMRMLLinearTransformNode()
-        slicer.mrmlScene.AddNode(stylusTipToStylusTipModelTransform) 
-        stylusTipToStylusTipModelTransform.SetName("StylusTipToStylusTipModel") 
-       
-       
-       
+    stylusTipModelToStylusTipTransform = slicer.util.getNode("StylusTipModelToStylusTip")
+    if stylusTipModelToStylusTipTransform==None:
+        stylusTipModelToStylusTipTransform=slicer.vtkMRMLLinearTransformNode()
+        slicer.mrmlScene.AddNode(stylusTipModelToStylusTipTransform) 
+        stylusTipModelToStylusTipTransform.SetName("StylusTipModelToStylusTip") 
+        
     matrix=vtk.vtkMatrix4x4()
     matrix.SetElement(0,3,-210)
-    stylusTipToStylusTipModelTransform.SetAndObserveMatrixTransformToParent(matrix)
-    self.stylusModelNode.SetAndObserveTransformNodeID(stylusTipToStylusTipModelTransform.GetID())
-    stylusTipToStylusTipModelTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
+    stylusTipModelToStylusTipTransform.SetAndObserveMatrixTransformToParent(matrix)
+    stylusTipModelToStylusTipTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
+    
+    self.stylusModelNode.SetAndObserveTransformNodeID(stylusTipModelToStylusTipTransform.GetID())
+    
 
     
     
@@ -513,7 +515,7 @@ class USGuidedProcedureLogic:
     print node.GetParameterName(0,1)
     print node.GetParameterName(0,2)
     print node.GetParameterName(0,3)
-    return slicer.cli.run(fr,None,parameters)
+    slicer.cli.run(fr,None,parameters)
     
  
   def getFiducialNode(self, listName,  index):
@@ -706,23 +708,14 @@ class USGuidedProcedureLogic:
     StylusTipToReferenceNode=slicer.util.getNode("StylusTipToReference")
     validTransformation=self.isValidTransformation("StylusTipToReference") and self.isValidTransformation("ReferenceToTracker")
     
-    path=slicer.modules.usguidedprocedure.path
-    modulePath=os.path.dirname(path)
-    
     if validTransformation==True: 
       cfl=slicer.modules.collectfiducials.logic()
       cfl.SetProbeTransformNode(StylusTipToReferenceNode)
       cfl.AddFiducial()
       print("Tracker position recorded")   
-      file=os.path.join(modulePath,"sounds/notify.wav")
-      sound=qt.QSound(file)
-      sound.play()      
+        
     else:
       print("Tracker position is invalid")  
-      file=os.path.join(modulePath,"sounds/critico.wav") 
-      #sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\critico.wav")
-      sound=qt.QSound(file)
-      sound.play()   
     return validTransformation
     
   def startAcquisition(self,igtlRemoteLogic,igtlConnectorNode, OutputFilename):
@@ -882,8 +875,9 @@ class USGuidedProcedureLogic:
   def isValidTransformation(self, transformationNodeName):
  
       transformationNode=slicer.util.getNode(transformationNodeName)
-      transformation=vtk.vtkMatrix4x4()
-      transformationNode.GetMatrixTransformToWorld(transformation)
+      #transformation=vtk.vtkMatrix4x4()
+      #transformationNode.GetMatrixTransformToWorld(transformation)
+      transformation=transformationNode.GetMatrixTransformToParent()
       #print "Transformation is: "  
       #print transformation 
       
@@ -957,8 +951,9 @@ class USGuidedProcedureLogic:
       
   def crosshairEnable(self):   
       crosshairNode=slicer.util.getNode("Crosshair")
+      crosshairNode.NavigationOff() 
       crosshairNode.SetCrosshairMode(1) 
-      crosshairNode.NavigationOn()   
+        
            
 class USGuidedProcedureTest(unittest.TestCase):
   """

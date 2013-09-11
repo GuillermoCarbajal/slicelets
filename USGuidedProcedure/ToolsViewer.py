@@ -74,19 +74,23 @@ class ToolsViewer():
         print "Tools viewer is listening to the scene"
         
         referenceToTrackerNode = slicer.util.getNode("ReferenceToTracker")
+        referenceToTrackerNode.RemoveAllObservers()
         #if referenceToTrackerNode is not None:
         #    self.onReferenceTransformationModified()
         referenceToTrackerNode.AddObserver('ModifiedEvent', self.onReferenceTransformationModified)
        
         probeToReference = slicer.util.getNode("ProbeToReference")
+        probeToReference.RemoveAllObservers()
         #if probeToReference is not None:
         #    self.onProbeTransformationModified()
         probeToReference.AddObserver('ModifiedEvent', self.onProbeTransformationModified)
        
         stylusToReference = slicer.util.getNode("StylusTipToReference")
+        stylusToReference.RemoveAllObservers()
         #if stylusToReference is not None:
         #    self.onStylusTransformationModified()
         stylusToReference.AddObserver('ModifiedEvent', self.onStylusTransformationModified)
+       
         stylusModelNode=self.logic.getStylusModel()
         self.stylusModelDisplayNode=stylusModelNode.GetDisplayNode()
         self.stylusModelDisplayNode.SetVisibility(False)    
@@ -101,10 +105,12 @@ class ToolsViewer():
     def onProbeTransformationModified(self, caller,  event):
         if self.logic.isValidTransformation("ProbeToReference"):
           self.probeSemaphore.setStyleSheet(self.visibleStyle) 
+          #print "Probe Transformation is valid!!"
         else:
-          self.probeSemaphore.setStyleSheet(self.notVisibleStyle)   
+          self.probeSemaphore.setStyleSheet(self.notVisibleStyle)  
+          #print "Probe Transformation is invalid!!" 
           
-    def onStylusTransformationModified(self):
+    def onStylusTransformationModified(self, caller,  event):
         if self.logic.isValidTransformation("StylusTipToReference"):
           self.stylusSemaphore.setStyleSheet(self.visibleStyle) 
           self.stylusModelDisplayNode.SetVisibility(True)  

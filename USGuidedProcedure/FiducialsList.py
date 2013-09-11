@@ -125,6 +125,8 @@ class FiducialsList():
     
 
     def onLoadFiducialListClicked(self):  
+        crosshairNode=slicer.util.getNode("Crosshair")
+        crosshairNode.SetCrosshairMode(1) 
         self.logic.addFiducialsToImageList()   
            
     def listenToListModifications(self):
@@ -160,7 +162,8 @@ class FiducialsList():
           
           #raise this flag to ignore change events in the table, the flag is lowered at the end of this method
           self.updatingList = True
-          
+          crosshairNode=slicer.util.getNode("Crosshair")
+          crosshairNode.SetCrosshairMode(0)
           # populate the list
           fiducialListNode=slicer.util.getNode("Fiducials List")
           
