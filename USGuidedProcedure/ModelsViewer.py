@@ -29,10 +29,42 @@ class ModelsViewer():
         self.loadedDataWidget = loader.load(f)
         f.close()
         """
+        
+        
+        self.modelsFrame= qt.QFrame()
+        self.modelsFrame.setLayout(qt.QHBoxLayout())
+        self.modelsFrameLayout=self.modelsFrame.layout()
         self.listWidget = qt.QListWidget() 
+       
+        self.modelsLabel=qt.QLabel("Models:")
+        
         print("Constructor of ModelsViewer executed")
-        self.listWidget.show()
+        #self.listWidget.show()
         self.currentItem=None
+        
+        self.modelsButtonsFrame=qt.QFrame()
+        self.modelsButtonsFrame.setLayout(qt.QVBoxLayout())
+        self.modelsButtonsLayout=self.modelsButtonsFrame.layout()
+        
+        self.showPropertiesButton = qt.QPushButton("Show properties")
+        self.showPropertiesButton.toolTip = "Show the model properties"
+        self.showPropertiesButton.setEnabled(False)
+        self.showPropertiesButton.connect('clicked(bool)', self.onPropertiesClicked)
+        
+        self.removeModelButton = qt.QPushButton("Remove model")
+        self.removeModelButton.toolTip = "Remove the model"
+        self.removeModelButton.setEnabled(False)
+        self.removeModelButton.connect('clicked(bool)', self.onRemoveActionTriggered)
+        
+        self.modelsButtonsLayout.addWidget(self.modelsLabel)
+        self.modelsButtonsLayout.addWidget(self.showPropertiesButton)
+        self.modelsButtonsLayout.addWidget(self.removeModelButton)
+        
+        self.modelsFrameLayout.addWidget(self.listWidget)
+        self.modelsFrameLayout.addWidget(self.modelsButtonsFrame)
+        
+        
+        
         
         #self.listWidget.itemDoubleClicked.connect(self.onItemDoubleClicked)  
         self.propertiesMenu = PropertiesMenu()
@@ -45,17 +77,17 @@ class ModelsViewer():
         self.propertiesMenu.checkBoxIntersectionWithUSImage.connect("stateChanged(int)",self.onIntersectionWithUSImageChanged)
         
         
-        #Actions
-        self.listWidget.setContextMenuPolicy(qt.QActionEvent.ContextMenu)
-        removeAction = qt.QAction("Remove", self.listWidget)
-        removeAction.triggered.connect(self.onRemoveActionTriggered)
-        viewPropertiesAction = qt.QAction("Properties", self.listWidget)
-        viewPropertiesAction.triggered.connect(self.onPropertiesClicked)
-        self.listWidget.addAction(viewPropertiesAction)
-        self.listWidget.addAction(removeAction)
+#         #Actions
+#         self.listWidget.setContextMenuPolicy(qt.QActionEvent.ContextMenu)
+#         removeAction = qt.QAction("Remove", self.listWidget)
+#         removeAction.triggered.connect(self.onRemoveActionTriggered)
+#         viewPropertiesAction = qt.QAction("Properties", self.listWidget)
+#         viewPropertiesAction.triggered.connect(self.onPropertiesClicked)
+#         self.listWidget.addAction(viewPropertiesAction)
+#         self.listWidget.addAction(removeAction)
         
-    def getListWidget(self):
-        return self.listWidget
+    def getModelsViewerWidget(self):
+        return self.modelsFrame
            
     def setModuleLogic(self,logic):   
         self.logic=logic
@@ -70,7 +102,9 @@ class ModelsViewer():
             for i in xrange(1,numModels):
                 node = slicer.mrmlScene.GetNthNodeByClass(i, "vtkMRMLModelNode")
                 if ((node is not None) and (not slicer.vtkMRMLSliceLogic.IsSliceModelNode(node)) and node.GetClassName()=="vtkMRMLModelNode" ):      
-                    print(node.GetName())  
+                    #print(node.GetName())  
+                    self.showPropertiesButton.setEnabled(True)
+                    self.removeModelButton.setEnabled(True)
                     isAlreadyInList=False 
                     j=0
                     while ((j < self.listWidget.count) and (not isAlreadyInList)):
@@ -93,6 +127,9 @@ class ModelsViewer():
         
     def onPropertiesClicked(self):
         self.currentItem = self.listWidget.currentItem()
+        if self.currentItem==None:
+          ret=qt.QMessageBox.warning(self.listWidget, 'Models List', 'You must select a model in the list to see the properties.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
+          return
         # Get the current display node
         node=slicer.util.getNode(self.currentItem.text())
         node=slicer.vtkMRMLModelNode.SafeDownCast(node)
@@ -134,6 +171,9 @@ class ModelsViewer():
         
     def onRemoveActionTriggered(self):  
         item = self.listWidget.currentItem()
+        if self.currentItem==None:
+          ret=qt.QMessageBox.warning(self.listWidget, 'Models List', 'You must select a model to remove.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
+          return
         node=slicer.util.getNode(item.text())
         node=slicer.vtkMRMLModelNode.SafeDownCast(node)
         currentDisplayNode=node.GetDisplayNode() 

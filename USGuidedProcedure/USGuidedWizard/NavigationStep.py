@@ -17,14 +17,19 @@ class NavigationStep( USGuidedStep ) :
     self.reconstructionSuspended = False
     self.reconstructionStarted = False
     self.exploreVolume = False
-    self.outputVolFilename="recvol_Reference.mha"
-    self.outputVolDeviceName= "recvol_Reference"
+    self.reconstructedVolumePrefix="recvol"
+    #self.outputVolFilename="recvol_Reference.mha"
+    self.numberOfGeneratedVolumes=0;
+    self.volumeReferenceFrame="Reference"
+    self.outputVolFilename=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame+".mha"
+    #self.outputVolDeviceName= "recvol_Reference"
+    self.outputVolDeviceName= self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame
     self.liveReconstruction=True
     self.volumesAddedToTheScene=[] #contains the unique ID of the volumes added to the scene 
     self.scalarRange=[0.,255.]
     self.windowLevelMinMax=[0.1,254.99]
     self.preAcquireVolumeReconstructionSequence=True
-    self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction.mha"
+    self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction"+str(self.numberOfGeneratedVolumes)+".mha"
     
   def createUserInterface( self ):
     '''
@@ -112,12 +117,6 @@ class NavigationStep( USGuidedStep ) :
     self.suspendReconstructionButton.setEnabled(False)
     self.volumeReconstructionButtonsLayout.addWidget(self.suspendReconstructionButton)
     self.suspendReconstructionButton.connect('clicked(bool)', self.onSuspendReconstructionButtonClicked)
-    
-    self.exploreVolumeButton = qt.QPushButton("Show volume")
-    self.exploreVolumeButton.toolTip = "Show/Hide the volume reconstruction"
-    self.exploreVolumeButton.setEnabled(False)
-    self.volumeReconstructionButtonsLayout.addWidget(self.exploreVolumeButton)
-    self.exploreVolumeButton.connect('clicked(bool)', self.onExploreVolumeButtonClicked)
     
     #volumeReconstructionFrame.layout().addWidget(self.preAcquisitionFrame)
     volumeReconstructionFrame.layout().addWidget(self.volumeReconstructionButtonsFrame)
@@ -212,7 +211,6 @@ class NavigationStep( USGuidedStep ) :
          self.logic.startAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename)
          print("pre acquisition started!")
          self.startReconstructionButton.setText("Stop")
-         self.exploreVolumeButton.setEnabled(False)
          #self.suspendReconstructionButton.setEnabled(True)
          #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
       else:
@@ -220,6 +218,7 @@ class NavigationStep( USGuidedStep ) :
          print("pre acquisition stopped!")
          self.startReconstructionButton.setText("Start")   
          self.logic.reconstructVolume(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename,self.outputVolFilename,self.outputVolDeviceName)
+         self.numberOfGeneratedVolumes+=1
          self.pbarwin = AddProgresWin()
          self.pbarwin.show()
          #self.suspendReconstructionButton.setEnabled(False) 
@@ -243,17 +242,6 @@ class NavigationStep( USGuidedStep ) :
       else:
          self.logic.resumeVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
          self.suspendReconstructionButton.setText("Suspend") 
-       
-  def onExploreVolumeButtonClicked(self):
-    print("Explore volume button clicked")
-    self.exploreVolume = not self.exploreVolume
-    if self.exploreVolume == True:
-      self.logic.disconnectDriverForSlice()
-      self.logic.showReconstructedVolume()
-      self.exploreVolumeButton.setText("Hide Volume")
-    else:
-      self.logic.showRedSliceIn3D(True)
-      self.exploreVolumeButton.setText("Show Volume")
         
             
   def listenToVolumesAdded(self):
@@ -269,8 +257,11 @@ class NavigationStep( USGuidedStep ) :
          vl=slicer.modules.volumes
          vl=vl.logic()
          vl.Modified()
-         self.exploreVolumeButton.setEnabled(True)
          self.pbarwin.hide()
+         self.outputVolFilename=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame+".mha"
+         self.outputVolDeviceName=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame
+         self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction"+str(self.numberOfGeneratedVolumes)+".mha"
+         
          
   def onAddTargetButtonClicked(self):   
       self.logic.addFiducialToList("Target List")   
