@@ -43,20 +43,27 @@ class VolumesViewer():
         self.volumeButtonsFrame.setLayout(qt.QVBoxLayout())
         self.volumeButtonsLayout=self.volumeButtonsFrame.layout()
         
-        self.exploreVolumeButton = qt.QPushButton("Explore volume")
+        self.exploreVolumeButton = qt.QPushButton("Explore")
         self.exploreVolumeButton.toolTip = "Show the selected volume"
         self.exploreVolumeButton.setEnabled(False)
         self.exploreVolumeButton.connect('clicked(bool)', self.onExploreVolumeClicked)
         
-        self.hideVolumeButton = qt.QPushButton("Hide volume")
+        self.hideVolumeButton = qt.QPushButton("Hide")
         self.hideVolumeButton.toolTip = "Hide the volume"
         self.hideVolumeButton.setEnabled(False)
         self.hideVolumeButton.connect('clicked(bool)', self.onHideVolumeClicked)
+        
+        self.resliceVolumeButton = qt.QPushButton("Reslice")
+        self.resliceVolumeButton.toolTip = "Reslice the volume with a driver"
+        self.resliceVolumeButton.setEnabled(False)
+        self.resliceVolumeButton.connect('clicked(bool)', self.onResliceVolumeClicked)
         
      
         self.volumeButtonsLayout.addWidget(self.volumesLabel)
         self.volumeButtonsLayout.addWidget(self.exploreVolumeButton)
         self.volumeButtonsLayout.addWidget(self.hideVolumeButton)
+        self.volumeButtonsLayout.addWidget(self.resliceVolumeButton)
+        
         
         self.volumesFrameLayout.addWidget(self.listWidget)
         self.volumesFrameLayout.addWidget(self.volumeButtonsFrame)
@@ -99,6 +106,7 @@ class VolumesViewer():
                             self.logic.onVolumeAdded(node)
                             self.exploreVolumeButton.setEnabled(True)
                             self.hideVolumeButton.setEnabled(True)
+                            self.resliceVolumeButton.setEnabled(True)
                             #print("Info of added node:")
     
     
@@ -125,3 +133,16 @@ class VolumesViewer():
         greenWidgetCompNode.SetBackgroundVolumeID(None)
         yellowWidgetCompNode=slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeYellow")
         yellowWidgetCompNode.SetBackgroundVolumeID(None)    
+        
+        
+    def onResliceVolumeClicked(self):
+        print("Reslice volume button clicked")
+        item = self.listWidget.currentItem()
+        if item==None:
+             ret=qt.QMessageBox.warning(self.listWidget, 'Volumes List', 'You must select a volume to reslice.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
+             return
+         
+        node=slicer.util.getNode(item.text())
+        self.logic.disconnectDriverForSlice()
+        self.logic.showRedSliceIn3D(True)
+        self.logic.resliceVolumeWithDriver(node)     

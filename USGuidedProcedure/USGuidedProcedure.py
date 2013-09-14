@@ -562,6 +562,21 @@ class USGuidedProcedureLogic:
     greenNode.SetSliceVisible(False)
     yellowNode.SetSliceVisible(False)
     
+    
+  def resliceVolumeWithDriver(self,node):
+    image_RAS = slicer.util.getNode("Image_Reference") 
+    vrd = slicer.modules.volumereslicedriver
+    vrdl = vrd.logic()
+    vrdl.SetMRMLScene(slicer.mrmlScene)
+    
+    
+    greenNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
+    vrdl.SetDriverForSlice(image_RAS.GetID(), greenNode)
+    vrdl.SetModeForSlice(vrdl.MODE_TRANSVERSE180, greenNode)   
+    # Set the background volume 
+    greenWidgetCompNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeGreen")
+    greenWidgetCompNode.SetBackgroundVolumeID(node.GetID()) 
+    
   def disconnectDriverForSlice(self):
     redNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
     vrd = slicer.modules.volumereslicedriver
@@ -761,12 +776,11 @@ class USGuidedProcedureLogic:
       returnValue = True
     return returnValue  
     
-  def onVolumeAdded(self, volumeNode):  
-    print("A volume was added!!")
-    
+  def onVolumeAdded(self, volumeNode):     
     
     if self.isAnUltrasoundVolumeGeneratedWithPLUS(volumeNode) == True:
-      volumeNode.AddObserver("ModifiedEvent", self.onVolumeModified)      
+      print("A volume generated with PLUS was added!!")
+      #volumeNode.AddObserver("ModifiedEvent", self.onVolumeModified)      
     
       '''
       It is assumed that the volume was created with respect to the Reference
@@ -787,7 +801,7 @@ class USGuidedProcedureLogic:
     
       matrix = vtk.vtkMatrix4x4()
       volumeNode.GetIJKToRASMatrix(matrix) 
-      print matrix
+      #print matrix
       sx = matrix.GetElement(0, 0)
       if (sx < 0):
         ox = matrix.GetElement(0, 3)
@@ -799,7 +813,7 @@ class USGuidedProcedureLogic:
         matrix.SetElement(1, 1, -sy)
         matrix.SetElement(1, 3, -oy)    
       volumeNode.SetIJKToRASMatrix(matrix)
-      print matrix
+      #print matrix
     
       # Volumes are placed under the Reference coordinate system
       referenceToRASNode = slicer.util.getNode("ReferenceToRAS")
@@ -874,10 +888,10 @@ class USGuidedProcedureLogic:
     self.vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
     slicer.mrmlScene.AddNode(self.vrDisplayNode)
     self.vrDisplayNode.SetVisibility(False)
-    self.vrDisplayNode.AddObserver("ModifiedEvent", self.onVolumeRenderingModified)  
+    #self.vrDisplayNode.AddObserver("ModifiedEvent", self.onVolumeRenderingModified)  
     
-    vrLogic.Modified()
-    self.vrDisplayNode.Modified()
+    #vrLogic.Modified()
+    #self.vrDisplayNode.Modified()
     self.vrDisplayNode.UpdateScene(slicer.mrmlScene)                 
                         
                                   

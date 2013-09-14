@@ -31,6 +31,8 @@ class NavigationStep( USGuidedStep ) :
     self.preAcquireVolumeReconstructionSequence=True
     self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction"+str(self.numberOfGeneratedVolumes)+".mha"
     
+    self.pbarwin = AddProgresWin()
+    
   def createUserInterface( self ):
     '''
     '''
@@ -160,8 +162,6 @@ class NavigationStep( USGuidedStep ) :
     print("We are in the onEntry function of NavigationStep")
     
     
-    # listen to volumes added
-    self.listenToVolumesAdded()
     qt.QTimer.singleShot(0, self.killButton)
 
   def onExit(self, goingTo, transitionType):
@@ -204,6 +204,7 @@ class NavigationStep( USGuidedStep ) :
          self.logic.stopVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
          print("volume reconstruction stopped!")
          self.startReconstructionButton.setText("Start")   
+         self.startReconstructionButton.setEnabled(False)
          self.suspendReconstructionButton.setEnabled(False)
     else:
       self.reconstructionStarted = not self.reconstructionStarted
@@ -217,9 +218,11 @@ class NavigationStep( USGuidedStep ) :
          self.logic.stopAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode)
          print("pre acquisition stopped!")
          self.startReconstructionButton.setText("Start")   
+         self.startReconstructionButton.setEnabled(False)
          self.logic.reconstructVolume(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename,self.outputVolFilename,self.outputVolDeviceName)
+         # listen to volumes added
+         self.listenToVolumesAdded()
          self.numberOfGeneratedVolumes+=1
-         self.pbarwin = AddProgresWin()
          self.pbarwin.show()
          #self.suspendReconstructionButton.setEnabled(False) 
          #node=slicer.vtkMRMLScalarVolumeNode()
@@ -247,6 +250,9 @@ class NavigationStep( USGuidedStep ) :
   def listenToVolumesAdded(self):
     self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onVolumeAdded)
 
+  def doNotListenToVolumesAdded(self):
+    slicer.mrmlScene.RemoveObserver(self.sceneObserver)
+    
   def listenToTargetListModification(self):
     fiducialListNode=slicer.util.getNode("Target List")
     fiducialListNode.AddObserver('ModifiedEvent', self.onTargetListModification)
@@ -254,13 +260,17 @@ class NavigationStep( USGuidedStep ) :
   def onVolumeAdded(self, caller,  event):  
       node = slicer.util.getNode(self.outputVolDeviceName)
       if not node==None:
-         vl=slicer.modules.volumes
-         vl=vl.logic()
-         vl.Modified()
+         self.doNotListenToVolumesAdded()
          self.pbarwin.hide()
          self.outputVolFilename=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame+".mha"
          self.outputVolDeviceName=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame
          self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction"+str(self.numberOfGeneratedVolumes)+".mha"
+         self.startReconstructionButton.setEnabled(True)
+         vl=slicer.modules.volumes
+         vl=vl.logic()
+         vl.SetMRMLScene(slicer.mrmlScene)
+         vl.Modified()  
+         print "Navigation step: volume added"
          
          
   def onAddTargetButtonClicked(self):   

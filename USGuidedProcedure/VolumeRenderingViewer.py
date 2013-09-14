@@ -4,7 +4,7 @@ Created on 28/03/2013
 @author: Usuario
 '''
 import os
-from PropertiesMenu import *
+from VolumeRenderingPropertiesMenu import *
 
 from __main__ import vtk, qt, ctk, slicer
 
@@ -43,23 +43,36 @@ class VolumeRenderingViewer():
         self.volumeButtonsFrame.setLayout(qt.QVBoxLayout())
         self.volumeButtonsLayout=self.volumeButtonsFrame.layout()
         
-        self.showVolumeRenderingButton = qt.QPushButton("Show rendering")
+        self.showVolumeRenderingButton = qt.QPushButton("Show")
         self.showVolumeRenderingButton.toolTip = "Show the volume rendering"
         self.showVolumeRenderingButton.setEnabled(False)
         self.showVolumeRenderingButton.connect('clicked(bool)', self.onShowVolumeRenderingButtonClicked)
         
-        self.hideVolumeRenderingButton = qt.QPushButton("Hide rendering")
+        self.hideVolumeRenderingButton = qt.QPushButton("Hide")
         self.hideVolumeRenderingButton.toolTip = "Hide the volume rendering"
         self.hideVolumeRenderingButton.setEnabled(False)
         self.hideVolumeRenderingButton.connect('clicked(bool)', self.onHideVolumeRenderingButtonClicked)
         
+        self.modifyVolumeRenderingButton = qt.QPushButton("Modify")
+        self.modifyVolumeRenderingButton.toolTip = "Modify the properties of the volume rendering"
+        self.modifyVolumeRenderingButton.setEnabled(False)
+        self.modifyVolumeRenderingButton.connect('clicked(bool)', self.onModifyVolumeRenderingButtonClicked)
+        
         self.volumeButtonsLayout.addWidget(self.renderingLabel )
         self.volumeButtonsLayout.addWidget(self.showVolumeRenderingButton)
         self.volumeButtonsLayout.addWidget(self.hideVolumeRenderingButton)
+        self.volumeButtonsLayout.addWidget(self.modifyVolumeRenderingButton)
         
         
         self.volumesFrameLayout.addWidget(self.listWidget)
         self.volumesFrameLayout.addWidget(self.volumeButtonsFrame)
+        
+        self.volumeRenderingPropertiesMenu = VolumeRenderingPropertiesMenu()
+        self.volumeRenderingPropertiesMenu.threshold.connect('valuesChanged(double,double)', self.onThresholdSliderMoved)
+        self.volumeRenderingPropertiesMenu.colorRangeSlider.connect('valuesChanged(double,double)', self.onColorSliderMoved)
+        self.volumeRenderingPropertiesMenu.checkBoxVisible3D.connect("stateChanged(int)",self.onVisible3DChanged)
+        
+        self.scalarRange = [0., 255.]
         
     def getVolumeRenderingViewerWidget(self):
         return self.volumesFrame
@@ -78,6 +91,7 @@ class VolumeRenderingViewer():
         print("A volume rendering was modified")
         self.showVolumeRenderingButton.setEnabled(True)
         self.hideVolumeRenderingButton.setEnabled(True)
+        self.modifyVolumeRenderingButton.setEnabled(True)
     
         numVolumes=slicer.mrmlScene.GetNumberOfNodesByClass("vtkMRMLScalarVolumeNode") 
         print "Number of volumes: " + str(numVolumes)
@@ -121,6 +135,16 @@ class VolumeRenderingViewer():
          
         vrDisplayNode=slicer.util.getNode(item.text())
         vrDisplayNode.SetVisibility(False)      
+        
+    def onModifyVolumeRenderingButtonClicked(self):
+        item = self.listWidget.currentItem()
+        if item==None:
+          ret=qt.QMessageBox.warning(self.listWidget, 'Volume Rendering List', 'You must select a volume rendering to show.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
+          return
+         
+        vrDisplayNode=slicer.util.getNode(item.text())
+        self.currentVolumeRendering=vrDisplayNode   
+        self.volumeRenderingPropertiesMenu.show()
             
     def onRemoveActionTriggered(self):  
         item = self.listWidget.currentItem()
@@ -131,3 +155,37 @@ class VolumeRenderingViewer():
         slicer.mrmlScene.RemoveNode(node)
         # Delete the item
         self.listWidget.takeItem(self.listWidget.row(item))
+        
+        
+    def onThresholdSliderMoved(self,minValue,maxValue):
+        # Get the current display node
+        print("Opacity Slider movement captured!")
+        #print opacity
+        volumePropertyNode=self.currentVolumeRendering.GetVolumePropertyNode()    
+        scalarOpacity=volumePropertyNode.GetScalarOpacity()
+        scalarOpacity.RemoveAllPoints()
+        scalarOpacity.AddPoint(self.scalarRange[0], 0.)
+        scalarOpacity.AddPoint(minValue, 0.)
+        scalarOpacity.AddPoint(maxValue, 1.)
+        scalarOpacity.AddPoint(self.scalarRange[1], 1.)
+        #colorTransfer=volumePropertyNode.GetColor()  
+    
+    def onColorSliderMoved(self,minValue,maxValue):
+        # Get the current display node
+        print("Color Slider movement captured!")
+        #print opacity
+        volumePropertyNode=self.currentVolumeRendering.GetVolumePropertyNode() 
+        colorTransfer=volumePropertyNode.GetColor()  
+        colorTransfer.RemoveAllPoints()
+        black = [0., 0., 0.]
+        white = [1., 1., 1.]
+        colorTransfer.AddRGBPoint(self.scalarRange[0], black[0], black[1], black[2])
+        colorTransfer.AddRGBPoint(minValue, black[0], black[1], black[2])
+        colorTransfer.AddRGBPoint(maxValue, white[0], white[1], white[2]);
+        colorTransfer.AddRGBPoint(self.scalarRange[1], white[0], white[1], white[2]);   
+   
+        
+        
+    def onVisible3DChanged(self,isVisible):
+        #print isVisible
+        self.currentVolumeRendering.SetVisibility(isVisible)  
