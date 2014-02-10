@@ -132,6 +132,9 @@ class FiducialsList():
     def listenToListModifications(self):
         self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onFiducialsListModified)
         
+    def doNotListenToListModifications(self):    
+        slicer.mrmlScene.RemoveObserver(self.sceneObserver)
+        
     def onFiducialsListModified(self, caller,  event):
         if self.updatingList:
           return

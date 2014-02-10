@@ -74,6 +74,8 @@ class VolumeRenderingViewer():
         
         self.scalarRange = [0., 255.]
         
+        self.volumePropertyMenuWidget =slicer.qMRMLVolumePropertyNodeWidget()
+        
     def getVolumeRenderingViewerWidget(self):
         return self.volumesFrame
            
@@ -123,6 +125,30 @@ class VolumeRenderingViewer():
           return
          
         vrDisplayNode=slicer.util.getNode(item.text())
+        
+        #vrDisplayNode.SetFollowVolumeDisplayNode(True)
+        #vrDisplayNode.SetFollowVolumeDisplayNode(False)
+        
+        
+#         volNode=vrDisplayNode.GetVolumeNode()
+#         disp=volNode.GetDisplayNode()
+#         scalarRange=disp.GetScalarRange()
+#         window=disp.GetWindow()
+#         level=disp.GetLevel()
+#         wl=[window,level]
+#         
+#         colorNode=disp.GetColorNode()
+#         lut=colorNode.GetLookupTable()
+#         
+#         vp=vrDisplayNode.GetVolumePropertyNode()
+#         vtkVp=vp.GetVolumeProperty()
+#         
+#         vr=slicer.modules.volumerendering
+#         vrl=vr.logic()
+#         vrl.SetMRMLScene(slicer.mrmlScene)
+#         vrl.SetWindowLevelToVolumeProp(self.scalarRange,wl,lut,vtkVp)
+        
+        #vrDisplayNode.SetAndObserveColorNodeID(colorNode.GetID())
         if vrDisplayNode.GetVisibility()==True:
            vrDisplayNode.SetVisibility(False)
         vrDisplayNode.SetVisibility(True)  
@@ -144,7 +170,12 @@ class VolumeRenderingViewer():
          
         vrDisplayNode=slicer.util.getNode(item.text())
         self.currentVolumeRendering=vrDisplayNode   
-        self.volumeRenderingPropertiesMenu.show()
+        volumePropertyNode=self.currentVolumeRendering.GetVolumePropertyNode()  
+        self.volumePropertyMenuWidget.setMRMLVolumePropertyNode(volumePropertyNode)
+        self.volumePropertyMenuWidget.show()
+        
+        
+        #self.volumeRenderingPropertiesMenu.show()
             
     def onRemoveActionTriggered(self):  
         item = self.listWidget.currentItem()

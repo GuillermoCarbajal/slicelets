@@ -834,8 +834,8 @@ class USGuidedProcedureLogic:
     # the color function is configured
     # zero is associated to the scalar zero and 1 to the scalar 255
     colorTransfer = vtk.vtkColorTransferFunction()
-    black = [0., 0., 0.]
-    white = [1., 1., 1.]
+    black = [0., 0., 1.]
+    white = [1., 0., 0.]
     colorTransfer.AddRGBPoint(self.scalarRange[0], black[0], black[1], black[2])
     colorTransfer.AddRGBPoint(self.windowLevelMinMax[0], black[0], black[1], black[2])
     colorTransfer.AddRGBPoint(self.windowLevelMinMax[1], white[0], white[1], white[2]);
@@ -885,7 +885,9 @@ class USGuidedProcedureLogic:
       self.vrDisplayNode.SetName(volumeNode.GetName()+"Rendering")  
       
     self.vrDisplayNode.SetAndObserveVolumeNodeID(volumeNode.GetID())
+    #self.vrDisplayNode.SetFollowVolumeDisplayNode(True)
     self.vrDisplayNode.SetAndObserveVolumePropertyNodeID(volumePropertyNode.GetID())
+    
     slicer.mrmlScene.AddNode(self.vrDisplayNode)
     self.vrDisplayNode.SetVisibility(False)
     #self.vrDisplayNode.AddObserver("ModifiedEvent", self.onVolumeRenderingModified)  
@@ -1215,8 +1217,14 @@ class Slicelet(object):
     groupBox = self.workflowWidget.workflowGroupBox()
     groupBox.errorTextEnabled = False
 
-    self.workflowWidget.buttonBoxWidget().nextButtonDefaultText = ""
-    self.workflowWidget.buttonBoxWidget().backButtonDefaultText = ""
+    #bw.nextButtonDefaultText = ""
+    #bw.backButtonDefaultText = ""
+    
+    nextButton=bw.nextButton()
+    backButton=bw.backButton()
+    nextButton.text=""
+    backButton.text=""
+  
     self.leftFrame.layout().addWidget(self.workflowWidget, 8)
     
 

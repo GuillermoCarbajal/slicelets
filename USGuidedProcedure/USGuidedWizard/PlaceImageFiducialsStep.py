@@ -109,7 +109,9 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
     #crosshairNode=slicer.util.getNode("Crosshair")
     #crosshairNode.SetCrosshairMode(1) 
     #self.logic.crosshairDisable()
+    self.fiducialsList.doNotListenToListModifications()
     print("We are in the onExit function of PlaceImageFiducialsStep")
+    
     
   def updateWidgetFromParameters(self, parameterNode):
     self.fiducialsList.updateFiducialsList()    

@@ -28,13 +28,19 @@ class LoadSceneStep( USGuidedStep ) :
 
     # Button to connect
     self.loadSceneButton = qt.QPushButton("Load a scene")
+    # Connections
+    self.loadSceneButton.connect("clicked()",self.onLoadSceneButtonClicked)
+    
+    self.importDicomButton = qt.QPushButton("Import Dicom")
+    # Connections
+    self.importDicomButton.connect("clicked()",self.onImportDicomButtonClicked)
     
     # Add to the widget
     self.__layout.addWidget(self.addDataButton)
     self.__layout.addWidget(self.loadSceneButton)
+    #self.__layout.addWidget(self.importDicomButton)
     
-    # Connections
-    self.loadSceneButton.connect("clicked()",self.onLoadSceneButtonClicked)
+    
 
     self.updateWidgetFromParameters(self.parameterNode())
 
@@ -82,6 +88,10 @@ class LoadSceneStep( USGuidedStep ) :
     
   def onLoadSceneButtonClicked(self):
     slicer.app.ioManager().openLoadSceneDialog()
+    
+  def onImportDicomButtonClicked(self):
+    self.w= ctk.ctkDICOMAppWidget()
+    self.w.show()
     
     
     

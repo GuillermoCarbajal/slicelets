@@ -40,6 +40,7 @@ class AddProgresWin(qt.QWidget):
 
        self.setLayout(mainLayout)
        self.setWindowTitle("Work in progress")
+       self.setWindowModality(True)
 
        #self.thread.partDone.connect(self.updatePBar)
        #self.thread.procDone.connect(self.fin)

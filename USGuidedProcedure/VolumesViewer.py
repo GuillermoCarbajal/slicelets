@@ -40,7 +40,12 @@ class VolumesViewer():
         self.currentItem=None
         
         self.volumeButtonsFrame=qt.QFrame()
-        self.volumeButtonsFrame.setLayout(qt.QVBoxLayout())
+        #self.volumeButtonsFrame.setLayout(qt.QVBoxLayout())
+        #self.volumeButtonsLayout=self.volumeButtonsFrame.layout()
+        
+        
+        
+        self.volumeButtonsFrame.setLayout(qt.QGridLayout())
         self.volumeButtonsLayout=self.volumeButtonsFrame.layout()
         
         self.exploreVolumeButton = qt.QPushButton("Explore")
@@ -58,15 +63,24 @@ class VolumesViewer():
         self.resliceVolumeButton.setEnabled(False)
         self.resliceVolumeButton.connect('clicked(bool)', self.onResliceVolumeClicked)
         
+        self.colorMapButton = qt.QPushButton("Colormap")
+        self.colorMapButton.toolTip = "Select the colormap of the volume"
+        self.colorMapButton.setEnabled(False)
+        self.colorMapButton.connect('clicked(bool)', self.onColormapClicked)
+        
      
-        self.volumeButtonsLayout.addWidget(self.volumesLabel)
-        self.volumeButtonsLayout.addWidget(self.exploreVolumeButton)
-        self.volumeButtonsLayout.addWidget(self.hideVolumeButton)
-        self.volumeButtonsLayout.addWidget(self.resliceVolumeButton)
+        self.volumeButtonsLayout.addWidget(self.volumesLabel,0,0)
+        self.volumeButtonsLayout.addWidget(self.exploreVolumeButton,1,0)
+        self.volumeButtonsLayout.addWidget(self.hideVolumeButton,1,1)
+        self.volumeButtonsLayout.addWidget(self.resliceVolumeButton,2,0)
+        self.volumeButtonsLayout.addWidget(self.colorMapButton,2,1)
+        
+        self.scalarVolumeDisplayNodeWidget=slicer.qSlicerScalarVolumeDisplayWidget()
+        self.scalarVolumeDisplayNodeWidget.setMRMLScene(slicer.mrmlScene)
         
         
-        self.volumesFrameLayout.addWidget(self.listWidget)
-        self.volumesFrameLayout.addWidget(self.volumeButtonsFrame)
+        self.volumesFrameLayout.addWidget(self.listWidget,2)
+        self.volumesFrameLayout.addWidget(self.volumeButtonsFrame,1)
         
     def getVolumesViewerWidget(self):
         return self.volumesFrame
@@ -107,6 +121,7 @@ class VolumesViewer():
                             self.exploreVolumeButton.setEnabled(True)
                             self.hideVolumeButton.setEnabled(True)
                             self.resliceVolumeButton.setEnabled(True)
+                            self.colorMapButton.setEnabled(True)
                             #print("Info of added node:")
     
     
@@ -145,4 +160,17 @@ class VolumesViewer():
         node=slicer.util.getNode(item.text())
         self.logic.disconnectDriverForSlice()
         self.logic.showRedSliceIn3D(True)
-        self.logic.resliceVolumeWithDriver(node)     
+        self.logic.resliceVolumeWithDriver(node)  
+        
+    def onColormapClicked(self):
+        print("Colormap button clicked")
+        item = self.listWidget.currentItem()
+        if item==None:
+             ret=qt.QMessageBox.warning(self.listWidget, 'Volumes List', 'You must select a volume to reslice.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
+             return
+         
+        node=slicer.util.getNode(item.text())
+        self.scalarVolumeDisplayNodeWidget.setMRMLVolumeNode(node)  
+        self.scalarVolumeDisplayNodeWidget.show() 
+        
+           

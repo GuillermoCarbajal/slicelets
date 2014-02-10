@@ -72,7 +72,7 @@ class VolumeRenderingPropertiesMenu(qt.QWidget):
 
         self.propertiesMenuWidget.layout().addWidget(self.visible3DFrame)
         self.propertiesMenuWidget.layout().addWidget(self.thresholdFrame )
-        self.propertiesMenuWidget.layout().addWidget(self.colorFrame )
+        #self.propertiesMenuWidget.layout().addWidget(self.colorFrame )
        
         
         #self.timer = qt.QTimer()
