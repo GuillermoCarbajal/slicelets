@@ -748,20 +748,20 @@ class USGuidedProcedureLogic:
     igtlRemoteLogic.SendCommand('<Command Name="ReconstructVolume" InputSeqFilename="' + PreAcquisitionFilename + '" OutputVolFilename="' + OutputVolFilename + '" OutputVolDeviceName="' + OutputVolDeviceName + '"></Command>', igtlConnectorNode.GetID())   
  
   def startVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode, OutputVolFilename, OutputVolDeviceName):
-    self.commandID = igtlRemoteLogic.SendCommand('<Command Name="StartVolumeReconstruction" OutputVolFilename="' + OutputVolFilename + '" OutputVolDeviceName="' + OutputVolDeviceName + '" ChannelId="TrackedVideoStream"></Command>', igtlConnectorNode.GetID()) 
+    self.commandID = igtlRemoteLogic.SendCommand('<Command Name="StartVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" OutputVolFilename="' + OutputVolFilename + '" OutputVolDeviceName="' + OutputVolDeviceName + '" ChannelId="TrackedVideoStream"></Command>', igtlConnectorNode.GetID()) 
     print "Command ID =" + str(self.commandID)
     
   def suspendVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="SuspendVolumeReconstruction"></Command>', igtlConnectorNode.GetID())  
+    igtlRemoteLogic.SendCommand('<Command Name="SuspendVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" ></Command>', igtlConnectorNode.GetID())  
     
   def resumeVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="ResumeVolumeReconstruction"></Command>', igtlConnectorNode.GetID())   
+    igtlRemoteLogic.SendCommand('<Command Name="ResumeVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" ></Command>', igtlConnectorNode.GetID())   
     
   def stopVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="StopVolumeReconstruction" ReferencedCommandId="' + str(self.commandID) + '"></Command>', igtlConnectorNode.GetID())   
+    igtlRemoteLogic.SendCommand('<Command Name="StopVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice"></Command>', igtlConnectorNode.GetID())   
   
   def getVolumeReconstructionSnapshot(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="GetVolumeReconstructionSnapshot"></Command>', igtlConnectorNode.GetID())           
+    igtlRemoteLogic.SendCommand('<Command Name="GetVolumeReconstructionSnapshot"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" ></Command>', igtlConnectorNode.GetID())           
 
   def listenToVolumesAdded(self):
     vl = slicer.modules.volumes

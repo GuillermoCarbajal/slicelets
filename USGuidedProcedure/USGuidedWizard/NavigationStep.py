@@ -86,7 +86,7 @@ class NavigationStep( USGuidedStep ) :
     volumeReconstructionFrame.setLayout(qt.QVBoxLayout())
     volumeReconstructionLayout=volumeReconstructionFrame.layout()
     
-    self.volumeReconstructionLabel = qt.QLabel("Volume reconstruction: ", self.isTrackingFrame)
+    self.volumeReconstructionLabel = qt.QLabel("Volume reconstruction: ")
     self.volumeReconstructionLabel.setToolTip( "Perform volume reconstruction")
     volumeReconstructionFrame.layout().addWidget(self.volumeReconstructionLabel)
     
@@ -99,7 +99,7 @@ class NavigationStep( USGuidedStep ) :
     self.isPreAcquisitionLabel.setToolTip( "Enable/Disable the pre adquisition. It is important to pre adquire a sequence to determine the extent of the volume")
     self.preAcquisitionLayout.addWidget(self.isPreAcquisitionLabel)
 
-    self.isPreAcquisitionCheckBox = qt.QCheckBox(self.isTrackingFrame)
+    self.isPreAcquisitionCheckBox = qt.QCheckBox()
     self.isPreAcquisitionCheckBox.setCheckState(0)
     self.preAcquisitionLayout.addWidget(self.isPreAcquisitionCheckBox)
     self.isPreAcquisitionCheckBox.connect("stateChanged(int)",self.onPreAcquisitionStateChanged)
@@ -120,7 +120,7 @@ class NavigationStep( USGuidedStep ) :
     self.volumeReconstructionButtonsLayout.addWidget(self.suspendReconstructionButton)
     self.suspendReconstructionButton.connect('clicked(bool)', self.onSuspendReconstructionButtonClicked)
     
-    #volumeReconstructionFrame.layout().addWidget(self.preAcquisitionFrame)
+    volumeReconstructionFrame.layout().addWidget(self.preAcquisitionFrame)
     volumeReconstructionFrame.layout().addWidget(self.volumeReconstructionButtonsFrame)
     
     self.__layout.addWidget(volumeReconstructionFrame)
@@ -199,12 +199,23 @@ class NavigationStep( USGuidedStep ) :
          print("volume reconstruction started!")
          self.startReconstructionButton.setText("Stop")
          self.suspendReconstructionButton.setEnabled(True)
-         #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+         self.reconstructionSuspended = False
+         self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+         print "GOT VOLUME RECONSTRUCTION SNAPSHOT!"
+         self.listenToVolumesAdded()
+         self.numberOfGeneratedVolumes+=1
+         self.pbarwin.show()
+         self.volumeAdded = False;
+         #while(not self.reconstructionSuspended):
+         #  print("Start sleeping")
+         #  time.sleep(5)
+         #  print("Finish sleeping")
+         #  self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
       else:
          self.logic.stopVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
          print("volume reconstruction stopped!")
          self.startReconstructionButton.setText("Start")   
-         self.startReconstructionButton.setEnabled(False)
+         self.startReconstructionButton.setEnabled(True)
          self.suspendReconstructionButton.setEnabled(False)
     else:
       self.reconstructionStarted = not self.reconstructionStarted
@@ -212,7 +223,7 @@ class NavigationStep( USGuidedStep ) :
          self.logic.startAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename)
          print("pre acquisition started!")
          self.startReconstructionButton.setText("Stop")
-         #self.suspendReconstructionButton.setEnabled(True)
+         self.suspendReconstructionButton.setEnabled(True)
          #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
       else:
          self.logic.stopAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode)
@@ -221,6 +232,7 @@ class NavigationStep( USGuidedStep ) :
          self.startReconstructionButton.setEnabled(False)
          self.logic.reconstructVolume(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename,self.outputVolFilename,self.outputVolDeviceName)
          # listen to volumes added
+         self.volumeAdded = False;
          self.listenToVolumesAdded()
          self.numberOfGeneratedVolumes+=1
          self.pbarwin.show()
@@ -260,19 +272,25 @@ class NavigationStep( USGuidedStep ) :
   def onVolumeAdded(self, caller,  event):  
       node = slicer.util.getNode(self.outputVolDeviceName)
       if not node==None:
-         self.doNotListenToVolumesAdded()
-         self.pbarwin.hide()
-         self.outputVolFilename=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame+".mha"
-         self.outputVolDeviceName=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame
-         self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction"+str(self.numberOfGeneratedVolumes)+".mha"
-         self.startReconstructionButton.setEnabled(True)
-         vl=slicer.modules.volumes
-         vl=vl.logic()
-         vl.SetMRMLScene(slicer.mrmlScene)
-         vl.Modified()  
-         print "Navigation step: volume added"
-         
-         
+         if self.volumeAdded == False:  
+           self.pbarwin.hide() 
+           self.outputVolFilename=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame+".mha"
+           self.outputVolDeviceName=self.reconstructedVolumePrefix+str(self.numberOfGeneratedVolumes)+"_"+self.volumeReferenceFrame
+           self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction"+str(self.numberOfGeneratedVolumes)+".mha"
+           self.startReconstructionButton.setEnabled(True)
+           vl=slicer.modules.volumes
+           vl=vl.logic()
+           vl.SetMRMLScene(slicer.mrmlScene)
+           vl.Modified()  
+           print "Navigation step: volume added"
+           self.volumeAdded = True
+         if self.reconstructionStarted==False:
+           self.doNotListenToVolumesAdded() 
+         else:  
+           self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+           print "GOT VOLUME RECONSTRUCTION SNAPSHOT!"
+           self.onVolumeAdded(caller,event)
+           
   def onAddTargetButtonClicked(self):   
       self.logic.addFiducialToList("Target List")   
       
