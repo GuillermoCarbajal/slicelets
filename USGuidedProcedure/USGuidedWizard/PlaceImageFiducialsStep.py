@@ -82,6 +82,7 @@ class PlaceImageFiducialsStep( USGuidedStep ) :
     
     self.logic.createRegistrationLists()
     self.logic.createTargetList()
+    self.logic.createPlusCommandsList()
      
     self.fiducialsList.listenToListModifications()  
     

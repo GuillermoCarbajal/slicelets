@@ -31,6 +31,9 @@ class NavigationStep( USGuidedStep ) :
     self.preAcquireVolumeReconstructionSequence=True
     self.preAcquisitionFilename="acquiredFramesForVolumeReconstruction"+str(self.numberOfGeneratedVolumes)+".mha"
     
+    self.numberOfTargetsAdded=0
+    self.currentTargetName=""
+    
     self.pbarwin = AddProgresWin()
     
   def createUserInterface( self ):
@@ -190,28 +193,65 @@ class NavigationStep( USGuidedStep ) :
   def onSnapshotButtonClicked(self):
     self.logic.takeUSSnapshot2()  
          
+         
+  def listenToPlusServerStopAcquisitionReply(self):
+    self.PlusServerObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onPlusServerReplyReceived)
+
+  def doNotListenToPlusServerReply(self):
+    slicer.mrmlScene.RemoveObserver(self.PlusServerObserver)
+    
+           
+  def onPlusServerReplyReceived(self, caller,  event):
+    replyName="ACK_" + str(self.commandId) 
+    node = slicer.util.getNode(replyName) 
+    if node is not None:
+      self.doNotListenToPlusServerReply()  
+      cmdName="CMD_" + str(self.commandId)  
+      cmdNode=slicer.util.getNode(cmdName)
+      commandText=cmdNode.GetText(0)  
+      if commandText.find("StopRecording")!=-1:
+        if  self.preAcquireVolumeReconstructionSequence is True:
+          print("pre acquisition stopped!")
+          self.logic.setActiveAnnotationsList("Plus Commands List")
+          self.logic.reconstructVolume(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename,self.outputVolFilename,self.outputVolDeviceName)
+          # listen to volumes added
+          self.volumeAdded = False;
+          self.listenToVolumesAdded()
+          self.numberOfGeneratedVolumes+=1
+          self.pbarwin.show()  
+      if commandText.find("GetVolumeReconstructionSnapshot")!=-1 and self.reconstructionStarted==True:    
+          print "GOT VOLUME RECONSTRUCTION SNAPSHOT!"
+          self.logic.setActiveAnnotationsList("Plus Commands List")
+          self.lastVolumeReconstructionCommandId = self.commandId
+          self.commandId= self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+          self.listenToPlusServerStopAcquisitionReply()
+        #node=getNode("*"+self.leftSideAcquisitionFilename)
       
+               
   def onStartReconstructionButtonClicked(self):
     if not self.preAcquireVolumeReconstructionSequence:  
       self.reconstructionStarted = not self.reconstructionStarted
       if self.reconstructionStarted == True:
+         self.logic.setActiveAnnotationsList("Plus Commands List")
          self.logic.startVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode,self.outputVolFilename,self.outputVolDeviceName)
          print("volume reconstruction started!")
          self.startReconstructionButton.setText("Stop")
          self.suspendReconstructionButton.setEnabled(True)
          self.reconstructionSuspended = False
-         self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
-         print "GOT VOLUME RECONSTRUCTION SNAPSHOT!"
+         self.logic.setActiveAnnotationsList("Plus Commands List")
+         self.commandId= self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
          self.listenToVolumesAdded()
          self.numberOfGeneratedVolumes+=1
          self.pbarwin.show()
          self.volumeAdded = False;
+         self.listenToPlusServerStopAcquisitionReply()
          #while(not self.reconstructionSuspended):
          #  print("Start sleeping")
          #  time.sleep(5)
          #  print("Finish sleeping")
          #  self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
       else:
+         self.logic.setActiveAnnotationsList("Plus Commands List")
          self.logic.stopVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
          print("volume reconstruction stopped!")
          self.startReconstructionButton.setText("Start")   
@@ -220,22 +260,18 @@ class NavigationStep( USGuidedStep ) :
     else:
       self.reconstructionStarted = not self.reconstructionStarted
       if self.reconstructionStarted == True:
+         self.logic.setActiveAnnotationsList("Plus Commands List")
          self.logic.startAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename)
          print("pre acquisition started!")
          self.startReconstructionButton.setText("Stop")
          self.suspendReconstructionButton.setEnabled(True)
          #self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
       else:
-         self.logic.stopAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode)
-         print("pre acquisition stopped!")
+         self.logic.setActiveAnnotationsList("Plus Commands List")
+         self.commandId= self.logic.stopAcquisition(self.igtlRemoteLogic, self.igtlConnectorNode)
          self.startReconstructionButton.setText("Start")   
          self.startReconstructionButton.setEnabled(False)
-         self.logic.reconstructVolume(self.igtlRemoteLogic, self.igtlConnectorNode,self.preAcquisitionFilename,self.outputVolFilename,self.outputVolDeviceName)
-         # listen to volumes added
-         self.volumeAdded = False;
-         self.listenToVolumesAdded()
-         self.numberOfGeneratedVolumes+=1
-         self.pbarwin.show()
+         self.listenToPlusServerStopAcquisitionReply()
          #self.suspendReconstructionButton.setEnabled(False) 
          #node=slicer.vtkMRMLScalarVolumeNode()
          #node.SetName(self.outputVolDeviceName)
@@ -292,15 +328,18 @@ class NavigationStep( USGuidedStep ) :
            self.onVolumeAdded(caller,event)
            
   def onAddTargetButtonClicked(self):   
-      self.logic.addFiducialToList("Target List")   
+      self.logic.addFiducialToList("Target List")  
+      self.currentTargetName= "T" +str(self.numberOfTargetsAdded) 
+      self.numberOfTargetsAdded = self.numberOfTargetsAdded + 1 
       
   def onTargetListModification(self, caller, event):
       print ("Target List was modified")
       # populate the list
       targetListNode=slicer.util.getNode("Target List")
-          
-      print "Number of target: " + str(targetListNode.GetNumberOfChildrenNodes())
-      for childrenIndex in xrange(targetListNode.GetNumberOfChildrenNodes()):
+      fidNode=slicer.util.getNode(self.currentTargetName)    
+      if (self.currentTargetName == "T" +str(self.numberOfTargetsAdded-1)):
+        print "Number of target: " + str(targetListNode.GetNumberOfChildrenNodes())
+        for childrenIndex in xrange(targetListNode.GetNumberOfChildrenNodes()):
           fidHierarchyNode=targetListNode.GetNthChildNode(childrenIndex)
           fidNode=fidHierarchyNode.GetAssociatedNode()
           fidNode.SetName("T"+str(childrenIndex))
@@ -310,7 +349,9 @@ class NavigationStep( USGuidedStep ) :
           fidTextDisplay.SetColor([0,0,1])
           if not fidNode:
             print 'Fid node nulo'
-            continue       
+            continue      
+          
+        
   def onTrackingStateChanged(self,status):     
         if status==2:
             self.logic.startTracking()

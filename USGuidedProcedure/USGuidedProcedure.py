@@ -346,7 +346,7 @@ class USGuidedProcedureLogic:
         modelsModuleLogic.SetMRMLScene(slicer.mrmlScene)
         path = slicer.modules.usguidedprocedure.path
         modulePath = os.path.dirname(path)
-        stylusModelFile = os.path.join(modulePath, "USGuidedWizard/Stylus_Example.stl")
+        stylusModelFile = os.path.join(modulePath, "models/Stylus_Example.stl")
         modelsModuleLogic.AddModel(stylusModelFile)
         self.stylusModelNode = slicer.util.getNode("Stylus_Example")
     
@@ -398,11 +398,16 @@ class USGuidedProcedureLogic:
       saml.SetActiveHierarchyNodeID(listNode.GetID())
       snode = slicer.vtkMRMLSelectionNode.SafeDownCast(slicer.mrmlScene.GetNodeByID("vtkMRMLSelectionNodeSingleton"))
       inode = slicer.vtkMRMLInteractionNode.SafeDownCast(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
-      snode.SetActiveAnnotationID("vtkMRMLAnnotationFiducialNode")
+      snode.SetReferenceActivePlaceNodeClassName("vtkMRMLAnnotationFiducialNode")
       inode.SwitchToSinglePlaceMode()
     else:
       print listName + "list does not exit!" 
-    
+      
+  def setActiveAnnotationsList(self, listName):
+      saml = slicer.modules.annotations.logic()   
+      listNode = slicer.util.getNode("All Annotations")   
+      if listNode is not None:
+        saml.SetActiveHierarchyNodeID(listNode.GetID())
   
   def createRegistrationLists(self): 
       saml = slicer.modules.annotations.logic()
@@ -427,6 +432,16 @@ class USGuidedProcedureLogic:
       parentNode = slicer.util.getNode("All Annotations")
       # parentNode=saml.GetActiveHierarchyNode()
       self.createAnnotationList("Target List", parentNode)
+      
+  def createPlusCommandsList(self): 
+      # The target list is created in the same level that the registration list   
+      # saml=slicer.modules.annotations.logic()
+      # saml.RegisterNodes() 
+      
+      # activeNode=saml.GetActiveHierarchyNode()
+      parentNode = slicer.util.getNode("All Annotations")
+      # parentNode=saml.GetActiveHierarchyNode()
+      self.createAnnotationList("Plus Commands List", parentNode)    
       
   def createAnnotationList(self, listName, parentNode):
      # check if we already have the annotation list
@@ -737,31 +752,41 @@ class USGuidedProcedureLogic:
     else:
       print("Tracker position is invalid")  
     return validTransformation
+
     
   def startAcquisition(self, igtlRemoteLogic, igtlConnectorNode, OutputFilename):
-    igtlRemoteLogic.SendCommand('<Command Name="StartRecording" OutputFilename="' + OutputFilename + '" CaptureDeviceId="CaptureDevice"></Command>', igtlConnectorNode.GetID())
-     
-  def stopAcquisition(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="StopRecording"  CaptureDeviceId="CaptureDevice"></Command>', igtlConnectorNode.GetID())    
-  
-  def reconstructVolume(self, igtlRemoteLogic, igtlConnectorNode, PreAcquisitionFilename, OutputVolFilename, OutputVolDeviceName):
-    igtlRemoteLogic.SendCommand('<Command Name="ReconstructVolume" InputSeqFilename="' + PreAcquisitionFilename + '" OutputVolFilename="' + OutputVolFilename + '" OutputVolDeviceName="' + OutputVolDeviceName + '"></Command>', igtlConnectorNode.GetID())   
+    self.commandId=igtlRemoteLogic.SendCommand('<Command Name="StartRecording" OutputFilename="' + OutputFilename + '" CaptureDeviceId="CaptureDevice"></Command>', igtlConnectorNode.GetID())
+    return self.commandId
  
-  def startVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode, OutputVolFilename, OutputVolDeviceName):
-    self.commandID = igtlRemoteLogic.SendCommand('<Command Name="StartVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" OutputVolFilename="' + OutputVolFilename + '" OutputVolDeviceName="' + OutputVolDeviceName + '" ChannelId="TrackedVideoStream"></Command>', igtlConnectorNode.GetID()) 
-    print "Command ID =" + str(self.commandID)
     
+  def stopAcquisition(self, igtlRemoteLogic, igtlConnectorNode): 
+    self.commandId=igtlRemoteLogic.SendCommand('<Command Name="StopRecording"  CaptureDeviceId="CaptureDevice"></Command>', igtlConnectorNode.GetID())
+    return self.commandId    
+        
+  def reconstructVolume(self, igtlRemoteLogic, igtlConnectorNode, PreAcquisitionFilename, OutputVolFilename, OutputVolDeviceName):
+    self.commandId=igtlRemoteLogic.SendCommand('<Command Name="ReconstructVolume" InputSeqFilename="' + PreAcquisitionFilename + '" OutputVolFilename="' + OutputVolFilename + '" OutputVolDeviceName="' + OutputVolDeviceName + '"></Command>', igtlConnectorNode.GetID())       
+    return self.commandId   
+  
+  def startVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode, OutputVolFilename, OutputVolDeviceName):
+    self.commandId = igtlRemoteLogic.SendCommand('<Command Name="StartVolumeReconstruction" OutputVolFilename="' + OutputVolFilename + '" OutputVolDeviceName="' + OutputVolDeviceName + '" ChannelId="TrackedVideoStream"></Command>', igtlConnectorNode.GetID()) 
+    return self.commandId   
+
   def suspendVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="SuspendVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" ></Command>', igtlConnectorNode.GetID())  
+    self.commandId=igtlRemoteLogic.SendCommand('<Command Name="SuspendVolumeReconstruction"></Command>', igtlConnectorNode.GetID())  
+    return self.commandId   
     
   def resumeVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="ResumeVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" ></Command>', igtlConnectorNode.GetID())   
+    self.commandId=igtlRemoteLogic.SendCommand('<Command Name="ResumeVolumeReconstruction"></Command>', igtlConnectorNode.GetID())   
+    return self.commandId   
     
   def stopVolumeReconstruction(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="StopVolumeReconstruction"  VolumeReconstructorDeviceId="VolumeReconstructorDevice"></Command>', igtlConnectorNode.GetID())   
-  
+    igtlRemoteLogic.SendCommand('<Command Name="StopVolumeReconstruction" ReferencedCommandId="' + str(self.commandId) + '"></Command>', igtlConnectorNode.GetID())   
+    return self.commandId   
+    
   def getVolumeReconstructionSnapshot(self, igtlRemoteLogic, igtlConnectorNode): 
-    igtlRemoteLogic.SendCommand('<Command Name="GetVolumeReconstructionSnapshot"  VolumeReconstructorDeviceId="VolumeReconstructorDevice" ></Command>', igtlConnectorNode.GetID())           
+    self.commandId=igtlRemoteLogic.SendCommand('<Command Name="GetVolumeReconstructionSnapshot"></Command>', igtlConnectorNode.GetID())           
+    return self.commandId   
+         
 
   def listenToVolumesAdded(self):
     vl = slicer.modules.volumes
