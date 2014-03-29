@@ -98,15 +98,19 @@ class ConnectToTrackerStep( USGuidedStep ) :
               
     pNode = self.parameterNode()
     pNode.SetParameter('currentStep', self.stepid)
+    self.toolsViewer.listenToTransformationsSentToTheScene()
     print("We are in the onEntry function of ConnectToTrackerStep")
     qt.QTimer.singleShot(0, self.killButton)
+    
 
   def onExit(self, goingTo, transitionType):
     self.logic.associateTransformations()   
-    self.toolsViewer.startListeningToTransformationsModifications()
+    self.logic.createRegistrationLists()
+    #self.toolsViewer.startListeningToTransformationsModifications()
     self.doStepProcessing()
     print("We are in the onExit function of ConnectToTrackerStep")
     super(ConnectToTrackerStep, self).onExit(goingTo, transitionType) 
+    
 
   def updateWidgetFromParameters(self, parameterNode):
     baselineVolumeID = parameterNode.GetParameter('baselineVolumeID')
@@ -122,6 +126,7 @@ class ConnectToTrackerStep( USGuidedStep ) :
     if self.estado=="Disconnected":
        print("Trying to connect...")
        print("Status before Connect(): " + str(self.connectorNode.GetState()))
+       self.logic.listenToImageSentToTheScene()
        self.logic.connectWithTracker()
        self.estado = "Waiting"
        self.statusBar.showMessage(self.estado)

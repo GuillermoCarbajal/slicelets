@@ -14,6 +14,7 @@ class CaptureSpatialPositionsStep( USGuidedStep ) :
     #self.setDescription( 'Place fiducials using the tracker' )
 
     self.__parent = super( CaptureSpatialPositionsStep, self )
+    self.numberOfAcquiredSpatialPositions = 0
 
   def createUserInterface( self ):
     '''
@@ -105,8 +106,6 @@ class CaptureSpatialPositionsStep( USGuidedStep ) :
     # calculate the transform to align the ROI in the next step with the
     # baseline volume
     pNode = self.parameterNode()
-    
-    self.updateListNodesForRegistration()
 
 #  def onPlaceTrackerPositionButtonClicked(self):   
 #    self.logic.recordTrackerPosition()
@@ -117,56 +116,38 @@ class CaptureSpatialPositionsStep( USGuidedStep ) :
 
 
   def onPlaceTrackerPositionButtonClicked(self):   
-
-    if self.fiducialsWidget.fiducialsList.rowCount ==0:
-      ret=qt.QMessageBox.warning(self.fiducialsWidget, 'Fiducials List', 'You must have image fiducials to match with tracker positions.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
-      return
-
-    currentRow = self.fiducialsWidget.fiducialsList.currentRow()
-    print("Current row is: " + str(currentRow))
     
-    if currentRow==-1:
-        ret=qt.QMessageBox.warning(self.fiducialsWidget, 'Fiducials List', 'You must select an image fiducials to match with the tracker position.', qt.QMessageBox.Ok , qt.QMessageBox.Ok )
-        return
+    fiducialName = "F" + str(self.numberOfAcquiredSpatialPositions)
+    positionRecorded= self.logic.captureSpatialsPositions(fiducialName)
     
-    fiducialListNode=slicer.util.getNode("Fiducials List")
-
-    # TODO uncomment this line and comment all the following TOD
-    
-    fidHierarchyNode=fiducialListNode.GetNthChildNode(currentRow)
-    fidNode=fidHierarchyNode.GetAssociatedNode()   
-    
-    fidName = fidNode.GetName()
-    
-    
-    
-    positionRecorded= self.logic.recordTrackerPosition()
-    
-    path=slicer.modules.usguidedprocedure.path
+    path=slicer.modules.stylusbasedusprobecalibration.path
     modulePath=os.path.dirname(path)
     
     if positionRecorded==True:
         #get the most recent node (the last) in the Tracker Points List
-        trackerNode = self.logic.getFiducialNode('Tracker Points List', -1)
-        trackerNode.SetName(fidName + '-Tracker')
-    
-    
-        # Associate the fiducial and the tracker position
-        # We remove the previous (if exist) tracker node 
-        # and we put the new tracker node ID in the table and check the row
-        previousTrackerID = self.fiducialsWidget.fiducialsList.item(currentRow, 4).text()
-        previousTrackerNode = slicer.mrmlScene.GetNodeByID(previousTrackerID)
-        if  previousTrackerNode:
-            logic = slicer.modules.annotations.logic()
-            logic.RemoveAnnotationNode(previousTrackerNode)
-    
-        self.fiducialsWidget.fiducialsList.item(currentRow, 3).setText(trackerNode.GetName())
-        self.fiducialsWidget.fiducialsList.item(currentRow, 4).setText(trackerNode.GetID())
-        self.fiducialsWidget.fiducialsList.item(currentRow, 0).setCheckState(2)
+        #trackerNode = slicer.util.getNode(fiducialName+"-Tracker")
+#         trackerNode = self.logic.getFiducialNode('Tracker Points List', -1)
+#     
+#     
+#         # Associate the fiducial and the tracker position
+#         # We remove the previous (if exist) tracker node 
+#         # and we put the new tracker node ID in the table and check the row
+#         currentItem = self.fiducialsWidget.fiducialsList.item(self.numberOfAcquiredSpatialPositions , 4)
+#         if currentItem is None:
+#           self.fiducialsList.addNewEmptyRow(self.numberOfAcquiredSpatialPositions)        
+#     
+#         currentItem = self.fiducialsWidget.fiducialsList.item(self.numberOfAcquiredSpatialPositions , 4)
+#         
+#         self.fiducialsWidget.fiducialsList.item(self.numberOfAcquiredSpatialPositions , 3).setText(trackerNode.GetName())
+#         self.fiducialsWidget.fiducialsList.item(self.numberOfAcquiredSpatialPositions , 4).setText(trackerNode.GetID())
+#         self.fiducialsWidget.fiducialsList.item(self.numberOfAcquiredSpatialPositions , 0).setCheckState(2)
+        
+        self.fiducialsList.updateFiducialsList("Tracker Points List")
       
         soundFile=os.path.join(modulePath,"sounds/notify.wav")
         sound=qt.QSound(soundFile)
         sound.play()    
+        self.numberOfAcquiredSpatialPositions += 1
     else:
         soundFile=os.path.join(modulePath,"sounds/critico.wav") 
         #sound=qt.QSound("C:\Users\Usuario\devel\slicelets\USGuidedProcedure\sounds\critico.wav")
@@ -207,62 +188,4 @@ class CaptureSpatialPositionsStep( USGuidedStep ) :
     self.updatingList = False
 
 
-  def updateListNodesForRegistration(self):
-    
-  #raise this flag to ignore change events in the table, the flag is lowered at the end of this method
-    self.updatingList = True
-
-    # get the nodes
-    fiducialListNode=slicer.util.getNode("Fiducials List")
-    trackerListNode=slicer.util.getNode("Tracker Points List")
-
-    fiducialListNodeForRegistration=slicer.util.getNode("Fiducials List (for registration)")
-    trackerListNodeForRegistration=slicer.util.getNode("Tracker Points List (for registration)")
-
-
-    
-    # clear the lists (for registration)
-    fiducialListNodeForRegistration.RemoveChildrenNodes()
-    trackerListNodeForRegistration.RemoveChildrenNodes()
-    
-    saml=slicer.modules.annotations.logic()
-    
-   
-    for row in range(self.fiducialsWidget.fiducialsList.rowCount):
-      fidID = self.fiducialsWidget.fiducialsList.item(row, 2).text()
-      trackerID = self.fiducialsWidget.fiducialsList.item(row, 4).text()
-      #print row
-      #print fidID
-      #print trackerID
-      
-      fidNode = slicer.mrmlScene.GetNodeByID(fidID)
-      trackerNode = slicer.mrmlScene.GetNodeByID(trackerID)
-      #print fidNode
-      #print trackerNode
-      
-      #if the row is selected to be used in the registration
-      if self.fiducialsWidget.fiducialsList.item(row, 0).checkState()==2:
-        #print 'Checked row'
-     
-        fidPos=[0,0,0]
-        dummy=fidNode.GetFiducialCoordinates(fidPos)
-        fidName = fidNode.GetName()
-        trackerPos=[0,0,0]
-        dummy=trackerNode.GetFiducialCoordinates(trackerPos)
-        trackerName = trackerNode.GetName()
-        
-        #create the new nodes copying the data 
-        fidNodeForRegistration=slicer.vtkMRMLAnnotationFiducialNode()
-        fidNodeForRegistration.SetFiducialWorldCoordinates(fidPos)
-        fidNodeForRegistration.SetName(fidName)	
-        trackerNodeForRegistration=slicer.vtkMRMLAnnotationFiducialNode()
-        trackerNodeForRegistration.SetFiducialWorldCoordinates(trackerPos)
-        trackerNodeForRegistration.SetName(trackerName)	
-        
-        # add the nodes to the lists for registration
-        saml.SetActiveHierarchyNodeID(fiducialListNodeForRegistration.GetID())
-        slicer.mrmlScene.AddNode(fidNodeForRegistration)
-        saml.SetActiveHierarchyNodeID(trackerListNodeForRegistration.GetID())
-        slicer.mrmlScene.AddNode(trackerNodeForRegistration)
-        
         

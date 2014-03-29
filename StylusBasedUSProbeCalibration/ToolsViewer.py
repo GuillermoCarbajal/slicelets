@@ -27,26 +27,17 @@ class ToolsViewer():
         self.stylusSemaphore=qt.QPushButton()
         self.stylusSemaphore.setEnabled(False)
         self.stylusSemaphore.setStyleSheet(self.noTrackingStyle)
-        self.stylusSemaphore.setText("S") 
+        self.stylusSemaphore.setText("Stylus Tip") 
         
         # probe semaphore
         self.probeSemaphore=qt.QPushButton()
         self.probeSemaphore.setEnabled(False)
         self.probeSemaphore.setStyleSheet(self.noTrackingStyle)
-        self.probeSemaphore.setText("P") 
-        
-        # reference semaphore
-        self.referenceSemaphore=qt.QPushButton()
-        self.referenceSemaphore.setEnabled(False)
-        self.referenceSemaphore.setStyleSheet(self.noTrackingStyle)
-        self.referenceSemaphore.setText("R") 
-        
-        self.toolsWidget.layout().addWidget(self.stylusSemaphore) 
-        self.toolsWidget.layout().addWidget(self.probeSemaphore) 
-        self.toolsWidget.layout().addWidget(self.referenceSemaphore) 
+        self.probeSemaphore.setText("Probe") 
          
+        self.toolsWidget.layout().addWidget(self.stylusSemaphore) 
+        self.toolsWidget.layout().addWidget(self.probeSemaphore)  
         print("Constructor of ToolViewer executed")
-        self.toolsWidget.show()
         
         
     def getToolsWidget(self):
@@ -71,38 +62,27 @@ class ToolsViewer():
             
     def startListeningToTransformationsModifications(self):    
         print "Tools viewer is listening to the scene"
-        
-        referenceToTrackerNode = slicer.util.getNode("ReferenceToTracker")
-        referenceToTrackerNode.RemoveAllObservers()
-        #if referenceToTrackerNode is not None:
-        #    self.onReferenceTransformationModified()
-        referenceToTrackerNode.AddObserver('ModifiedEvent', self.onReferenceTransformationModified)
        
-        probeToReference = slicer.util.getNode("ProbeToReference")
-        probeToReference.RemoveAllObservers()
+        probeToTracker = slicer.util.getNode("ProbeToTracker")
+        probeToTracker.RemoveAllObservers()
         #if probeToReference is not None:
         #    self.onProbeTransformationModified()
-        probeToReference.AddObserver('ModifiedEvent', self.onProbeTransformationModified)
+        probeToTracker.AddObserver('ModifiedEvent', self.onProbeTransformationModified)
        
-        stylusToReference = slicer.util.getNode("StylusTipToReference")
-        stylusToReference.RemoveAllObservers()
+        stylusTipToTracker = slicer.util.getNode("StylusTipToTracker")
+        stylusTipToTracker.RemoveAllObservers()
         #if stylusToReference is not None:
         #    self.onStylusTransformationModified()
-        stylusToReference.AddObserver('ModifiedEvent', self.onStylusTransformationModified)
+        stylusTipToTracker.AddObserver('ModifiedEvent', self.onStylusTransformationModified)
        
         stylusModelNode=self.logic.getStylusModel()
         self.stylusModelDisplayNode=stylusModelNode.GetDisplayNode()
         self.stylusModelDisplayNode.SetVisibility(False)    
         
         
-    def onReferenceTransformationModified(self, caller,  event):
-        if self.logic.isValidTransformation("ReferenceToTracker"):
-          self.referenceSemaphore.setStyleSheet(self.visibleStyle) 
-        else:
-          self.referenceSemaphore.setStyleSheet(self.notVisibleStyle)  
     
     def onProbeTransformationModified(self, caller,  event):
-        if self.logic.isValidTransformation("ProbeToReference"):
+        if self.logic.isValidTransformation("ProbeToTracker"):
           self.probeSemaphore.setStyleSheet(self.visibleStyle) 
           #print "Probe Transformation is valid!!"
         else:
@@ -110,12 +90,26 @@ class ToolsViewer():
           #print "Probe Transformation is invalid!!" 
           
     def onStylusTransformationModified(self, caller,  event):
-        if self.logic.isValidTransformation("StylusTipToReference"):
+        if self.logic.isValidTransformation("StylusTipToTracker"):
           self.stylusSemaphore.setStyleSheet(self.visibleStyle) 
           self.stylusModelDisplayNode.SetVisibility(True)  
         else:
           self.stylusSemaphore.setStyleSheet(self.notVisibleStyle)
           self.stylusModelDisplayNode.SetVisibility(False)    
                     
-         
+     
+    def listenToTransformationsSentToTheScene(self):
+      self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onTransformationsSentToTheScene)  
+      
+    def doNotListenToTransformationsSentToTheScene(self):
+      slicer.mrmlScene.RemoveObserver(self.sceneObserver)
+
+    def onTransformationsSentToTheScene(self, caller, event):
+      image_Image = slicer.util.getNode("Image_Image")   
+      if image_Image is not None: 
+        self.doNotListenToTransformationsSentToTheScene() 
+        self.logic.associateTransformations()  
+        self.startListeningToTransformationsModifications()
+        slicer.util.resetSliceViews() 
+        slicer.util.resetThreeDViews()      
         

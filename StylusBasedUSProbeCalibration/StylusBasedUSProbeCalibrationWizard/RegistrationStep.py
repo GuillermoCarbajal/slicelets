@@ -50,6 +50,7 @@ class RegistrationStep( USGuidedStep ) :
     pNode.SetParameter('currentStep', self.stepid)
     print("We are in the onEntry function of RegistrationStep")
     qt.QTimer.singleShot(0, self.killButton)
+    self.logic.showRedSliceIn3D(True)
 
   def onExit(self, goingTo, transitionType):
     self.doStepProcessing()

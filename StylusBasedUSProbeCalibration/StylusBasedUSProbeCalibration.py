@@ -178,6 +178,9 @@ class StylusBasedUSProbeCalibrationLogic:
   def __init__(self):
     # self.createRegistrationLists()
     self.connectorNode = None 
+    vrd = slicer.modules.volumereslicedriver
+    self.vrdl = vrd.logic()
+    self.vrdl.SetMRMLScene(slicer.mrmlScene)
     pass
 
   def hasImageData(self, volumeNode):
@@ -213,58 +216,40 @@ class StylusBasedUSProbeCalibrationLogic:
     # self.associateTransformations()  
     
   def associateTransformations(self):
-      
-    referenceToRASNode = slicer.util.getNode("ReferenceToRAS")
-    if referenceToRASNode == None:
-      referenceToRASNode = slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(referenceToRASNode)
-      referenceToRASNode.SetName("ReferenceToRAS")  
-    
+
     # # The nodes StylusTipToReference and ProbeToReference are added 
-    stylusTipToReferenceNode = slicer.util.getNode("StylusTipToReference")
+    stylusTipToReferenceNode = slicer.util.getNode("StylusTipToTracker")
     if stylusTipToReferenceNode == None:
       stylusTipToReferenceNode = slicer.vtkMRMLLinearTransformNode()
       slicer.mrmlScene.AddNode(stylusTipToReferenceNode)
-      stylusTipToReferenceNode.SetName("StylusTipToReference")
+      stylusTipToReferenceNode.SetName("StylusTipToTracker")
     
-    probeToReferenceNode = slicer.util.getNode("ProbeToReference")
+    probeToReferenceNode = slicer.util.getNode("ProbeToTracker")
     if probeToReferenceNode == None:
       probeToReferenceNode = slicer.vtkMRMLLinearTransformNode()
       slicer.mrmlScene.AddNode(probeToReferenceNode)
-      probeToReferenceNode.SetName("ProbeToReference")
+      probeToReferenceNode.SetName("ProbeToTracker")
       
-    referenceToTrackerNode = slicer.util.getNode("ReferenceToTracker")
-    if referenceToTrackerNode == None:
-      referenceToTrackerNode = slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(referenceToTrackerNode)
-      referenceToTrackerNode.SetName("ReferenceToTracker")  
+    stylusTipToProbeNode = slicer.util.getNode("StylusTipToProbe")
+    if stylusTipToProbeNode == None:
+      stylusTipToProbeNode = slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(stylusTipToProbeNode)
+      stylusTipToProbeNode.SetName("StylusTipToProbe")  
       
-    imageToReferenceNode = slicer.util.getNode("ImageToReference")
-    if imageToReferenceNode == None:
-      imageToReferenceNode = slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(imageToReferenceNode)
-      imageToReferenceNode.SetName("ImageToReference")  
-    
-    imageReferenceNode = slicer.util.getNode("Image_Reference")
-    if imageReferenceNode == None:
-      imageReferenceNode = slicer.vtkMRMLScalarVolumeNode()
-      slicer.mrmlScene.AddNode(imageReferenceNode)
-      imageReferenceNode.SetName("Image_Reference")  
+    imageToProbeNode = slicer.util.getNode("ImageToProbe")
+    if imageToProbeNode == None:
+      imageToProbeNode = slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(imageToProbeNode)
+      stylusTipToProbeNode.SetName("ImageToProbe")   
+      
+    #imageNode = slicer.util.getNode("Image_Image")          
       
         
     # referenceToRASNode=slicer.util.getNode("ReferenceToRAS")           
          
     # imageReferenceNode=slicer.util.getNode("Image_Reference")
-    imageReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
-    
-    # imageToReferenceNode=slicer.util.getNode("ImageToReference")
-    imageToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())
-    
-    # probeToReferenceNode=slicer.util.getNode("ProbeToReference")
-    probeToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())   
-    
-    # # Associate the stylus to reference transform with the reference to RAS
-    stylusTipToReferenceNode.SetAndObserveTransformNodeID(referenceToRASNode.GetID())     
+    #imageNode.SetAndObserveTransformNodeID(imageToProbeNode.GetID()) 
+    stylusTipToProbeNode.SetAndObserveTransformNodeID(probeToReferenceNode.GetID())   
      
     self.stylusModelNode = slicer.util.getNode("Stylus_Example")    
     if self.stylusModelNode == None:    
@@ -333,7 +318,7 @@ class StylusBasedUSProbeCalibrationLogic:
       
   def setActiveAnnotationsList(self, listName):
       saml = slicer.modules.annotations.logic()   
-      listNode = slicer.util.getNode("All Annotations")   
+      listNode = slicer.util.getNode(listName)   
       if listNode is not None:
         saml.SetActiveHierarchyNodeID(listNode.GetID())
   
@@ -386,6 +371,13 @@ class StylusBasedUSProbeCalibrationLogic:
     createdNode.SetName(listName) 
     
     
+  def hideAllTheFiducialsNode(self,listName):
+    listNode = slicer.util.getNode(listName)
+    for childrenIndex in xrange(listNode.GetNumberOfChildrenNodes()):              
+      fidHierarchyNode=listNode.GetNthChildNode(childrenIndex)
+      fidNode=fidHierarchyNode.GetAssociatedNode()   
+      fidNode.SetDisplayVisibility(False)   
+    
   def printFids(self):
     fiducialListNode = slicer.util.getNode("Fiducials List")
     for childrenIndex in xrange(fiducialListNode.GetNumberOfChildrenNodes()):
@@ -395,49 +387,6 @@ class StylusBasedUSProbeCalibrationLogic:
       dummy = fidNode.GetFiducialCoordinates(fidPos)
       print fidPos[0], ",", fidPos[1], ",", fidPos[2]
       
-  def addFiducialsToImageList(self):
-    saml = slicer.modules.annotations.logic() 
-    fnode = slicer.util.getNode("Fiducials List")
-    saml.SetActiveHierarchyNodeID(fnode.GetID())
-    f1 = slicer.vtkMRMLAnnotationFiducialNode()
-    f1.SetFiducialWorldCoordinates((0, 0, 5))
-    f1.SetName('Fiducial 1')	
-    slicer.mrmlScene.AddNode(f1)
-    f2 = slicer.vtkMRMLAnnotationFiducialNode()
-    f2.SetFiducialWorldCoordinates((0, 10, 5))
-    f2.SetName('Fiducial 2')	
-    slicer.mrmlScene.AddNode(f2)
-    f3 = slicer.vtkMRMLAnnotationFiducialNode()
-    f3.SetFiducialWorldCoordinates((10, 10, 5))
-    f3.SetName('Fiducial 3')	
-    slicer.mrmlScene.AddNode(f3)
-    f4 = slicer.vtkMRMLAnnotationFiducialNode()
-    f4.SetFiducialWorldCoordinates((10, 10, 15))
-    f4.SetName('Fiducial 4')	
-    slicer.mrmlScene.AddNode(f4)
-    print("Fiducials added to Image List")
-    
-  def addFiducialsToTrackerList(self):
-    saml = slicer.modules.annotations.logic() 
-    fnode = slicer.util.getNode("Tracker Points List")
-    saml.SetActiveHierarchyNodeID(fnode.GetID())
-    f1 = slicer.vtkMRMLAnnotationFiducialNode()
-    f1.SetFiducialWorldCoordinates((10, 0, 5))
-    f1.SetName('Stylus Tip 1')	
-    slicer.mrmlScene.AddNode(f1)
-    f2 = slicer.vtkMRMLAnnotationFiducialNode()
-    f2.SetFiducialWorldCoordinates((10, 10, 5))
-    f2.SetName('Stylus Tip 2')	
-    slicer.mrmlScene.AddNode(f2)
-    f3 = slicer.vtkMRMLAnnotationFiducialNode()
-    f3.SetFiducialWorldCoordinates((20, 10, 5))
-    f3.SetName('Stylus Tip 3')	
-    slicer.mrmlScene.AddNode(f3)
-    f4 = slicer.vtkMRMLAnnotationFiducialNode()
-    f4.SetFiducialWorldCoordinates((20, 10, 15))
-    f4.SetName('Stylus Tip 4')	
-    slicer.mrmlScene.AddNode(f4)
-    print("Fiducials added to Tracker List")
     
   def register(self):
     print("registration started")  
@@ -446,12 +395,12 @@ class StylusBasedUSProbeCalibrationLogic:
     # referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
     # referenceToRASNode.SetName("ReferenceToRAS")
     # slicer.mrmlScene.AddNode(referenceToRASNode)
-    referenceToRASNode = slicer.util.getNode("ReferenceToRAS")
+    referenceToRASNode = slicer.util.getNode("ImageToProbe")
     parameters = {}
     parameters["fixedLandmarks"] = fidPointsNode.GetID()
     parameters["movingLandmarks"] = spaPointsNode.GetID()
     parameters["saveTransform"] = referenceToRASNode.GetID()
-    parameters["transformType"] = "Rigid"
+    parameters["transformType"] = "Similarity"
     fr = slicer.modules.fiducialregistration
     frLogic = fr.cliModuleLogic()
     node = frLogic.CreateNode()
@@ -479,16 +428,15 @@ class StylusBasedUSProbeCalibrationLogic:
       node = None
       
     return node
-  
+ 
+  def getVolumeResliceDriverLogic(self):
+    return self.vrdl 
     
   def showRedSliceIn3D(self, isShown):  
-    image_RAS = slicer.util.getNode("Image_Reference")  
+    image_RAS = slicer.util.getNode("Image_Image")  
     redNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
-    vrd = slicer.modules.volumereslicedriver
-    vrdl = vrd.logic()
-    vrdl.SetMRMLScene(slicer.mrmlScene)
-    vrdl.SetDriverForSlice(image_RAS.GetID(), redNode)
-    vrdl.SetModeForSlice(vrdl.MODE_TRANSVERSE180, redNode)
+    self.vrdl.SetDriverForSlice(image_RAS.GetID(), redNode)
+    self.vrdl.SetModeForSlice(self.vrdl.MODE_TRANSVERSE180, redNode)
       
     # Set the background volume 
     redWidgetCompNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeRed")
@@ -505,20 +453,19 @@ class StylusBasedUSProbeCalibrationLogic:
     greenNode.SetSliceVisible(False)
     yellowNode.SetSliceVisible(False)
     
+  def listenToImageSentToTheScene(self):
+    self.sceneObserver = slicer.mrmlScene.AddObserver('ModifiedEvent', self.onImageSentToTheScene)
     
-  def resliceVolumeWithDriver(self,node):
-    image_RAS = slicer.util.getNode("Image_Reference") 
-    vrd = slicer.modules.volumereslicedriver
-    vrdl = vrd.logic()
-    vrdl.SetMRMLScene(slicer.mrmlScene)
-    
-    
-    greenNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-    vrdl.SetDriverForSlice(image_RAS.GetID(), greenNode)
-    vrdl.SetModeForSlice(vrdl.MODE_TRANSVERSE180, greenNode)   
-    # Set the background volume 
-    greenWidgetCompNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceCompositeNodeGreen")
-    greenWidgetCompNode.SetBackgroundVolumeID(node.GetID()) 
+
+  def doNotListenToImageSentToTheScene(self):
+    slicer.mrmlScene.RemoveObserver(self.sceneObserver)
+
+  def onImageSentToTheScene(self, caller, event):
+    image_Reference = slicer.util.getNode("Image_Image")   
+    if image_Reference is not None: 
+      self.doNotListenToImageSentToTheScene()
+      self.showRedSliceIn3D(True)      
+
     
   def disconnectDriverForSlice(self):
     redNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
@@ -541,7 +488,7 @@ class StylusBasedUSProbeCalibrationLogic:
     usnl = usn.logic()
     usnl.AddSnapshot(image_RAS)
     
-  def takeUSSnapshot2(self):
+  def takeUSSnapshot2(self,name):
     snapshotDisp = slicer.vtkMRMLModelDisplayNode()
     slicer.mrmlScene.AddNode(snapshotDisp)
     snapshotDisp.SetScene(slicer.mrmlScene)
@@ -553,8 +500,6 @@ class StylusBasedUSProbeCalibrationLogic:
     snapshotDisp.SetDiffuse(0)
     snapshotDisp.SetSaveWithScene(0)
     snapshotDisp.SetDisableModifiedEvent(0)
-    name = "Snapshot" + str(self.numberOfUltrasoundSnapshotsTaken)  
-    self.numberOfUltrasoundSnapshotsTaken = self.numberOfUltrasoundSnapshotsTaken + 1
     
     snapshotModel = slicer.vtkMRMLModelNode()
     snapshotModel.SetName(name)
@@ -565,7 +510,7 @@ class StylusBasedUSProbeCalibrationLogic:
     snapshotModel.SetSaveWithScene(0)
     slicer.mrmlScene.AddNode(snapshotModel)
     
-    image_RAS = slicer.util.getNode("Image_Reference")
+    image_RAS = slicer.util.getNode("Image_Image")
     
     dim = [0, 0, 0]
     imageData = image_RAS.GetImageData()
@@ -628,22 +573,54 @@ class StylusBasedUSProbeCalibrationLogic:
     image = vtk.vtkImageData()
     image.DeepCopy(imageData)
     modelDisplayNode = snapshotModel.GetModelDisplayNode()
-    modelDisplayNode.SetAndObserveTextureImageData(image)
+    modelDisplayNode.SetAndObserveTextureImageData(image)   
+    
+    snapshotTexture = slicer.vtkMRMLScalarVolumeNode()
+    snapshotTexture.SetAndObserveImageData(image)
+    snapshotTexture.SetName(name + "_Texture")
+    slicer.mrmlScene.AddNode(snapshotTexture)
+    snapshotTexture.CopyOrientation( image_RAS )
+    
+    snapshotTextureDisplayNode = slicer.vtkMRMLScalarVolumeDisplayNode()
+    snapshotTextureDisplayNode.SetName(name + "_TextureDisplay")
+    snapshotTextureDisplayNode.SetAutoWindowLevel(0);
+    snapshotTextureDisplayNode.SetWindow(256);
+    snapshotTextureDisplayNode.SetLevel(128);
+    snapshotTextureDisplayNode.SetDefaultColorMap();
+    slicer.mrmlScene.AddNode(snapshotTextureDisplayNode)
+    
+    snapshotTexture.AddAndObserveDisplayNodeID( snapshotTextureDisplayNode.GetID() )
+    
+    snapshotModel.SetAttribute( "TextureNodeID", snapshotTexture.GetID() )
+    snapshotModelDisplayNode= snapshotModel.GetModelDisplayNode()
+    snapshotModelDisplayNode.SetAndObserveTextureImageData( snapshotTexture.GetImageData() )
     
     
-  def recordTrackerPosition(self):
+  def captureSpatialsPositions(self,fidName ):
     saml = slicer.modules.annotations.logic() 
-    fnode = slicer.util.getNode("Tracker Points List")
-    saml.SetActiveHierarchyNodeID(fnode.GetID())  
-    StylusTipToReferenceNode = slicer.util.getNode("StylusTipToReference")
-    validTransformation = self.isValidTransformation("StylusTipToReference") and self.isValidTransformation("ReferenceToTracker")
+    listNode = slicer.util.getNode("Tracker Points List")
+    saml.SetActiveHierarchyNodeID(listNode.GetID())  
+    StylusTipToReferenceNode = slicer.util.getNode("StylusTipToProbe")
+    validTransformation = self.isValidTransformation("StylusTipToProbe") 
     
     if validTransformation == True: 
-      cfl = slicer.modules.collectfiducials.logic()
-      cfl.SetProbeTransformNode(StylusTipToReferenceNode)
-      cfl.AddFiducial()
+      #cfl = slicer.modules.collectfiducials.logic()
+      #cfl.SetProbeTransformNode(StylusTipToReferenceNode)
+      #cfl.AddFiducial()
+      transformation = StylusTipToReferenceNode.GetMatrixTransformToParent()
+      fidPos=[transformation.GetElement(0,3),transformation.GetElement(1,3),transformation.GetElement(2,3)]
+      trackerNode=slicer.vtkMRMLAnnotationFiducialNode()
+      trackerNode.SetFiducialWorldCoordinates(fidPos)
+      trackerNode.SetName(fidName + '-Tracker')    
+      self.setActiveAnnotationsList("Tracker Points List")
+      slicer.mrmlScene.AddNode(trackerNode)
+      self.setActiveAnnotationsList("Fiducials List")
+      fidPos=[0,0,0]
+      fidNode=slicer.vtkMRMLAnnotationFiducialNode()
+      fidNode.SetFiducialWorldCoordinates(fidPos)
+      fidNode.SetName(fidName + '-Tracker')   
+      self.takeUSSnapshot2(fidName + '-Snapshot')
       print("Tracker position recorded")   
-        
     else:
       print("Tracker position is invalid")  
     return validTransformation
@@ -977,6 +954,7 @@ class Slicelet(object):
     # start the workflow and show the widget
     self.workflow.start()
     self.workflowWidget.visible = True
+    
     
     if widgetClass:
       self.widget = widgetClass(self.parent)

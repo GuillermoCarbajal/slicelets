@@ -42,7 +42,6 @@ class PlaceStylusTipInTheImageStep( USGuidedStep ) :
 #    self.buttonsLayout.addStretch()
     
     self.fiducialsList = FiducialsList()
-    self.fiducialsList.setPlaceStylusTipInTheImagetep(True)
     self.fiducialsList.setModuleLogic(self.logic)
     self.__layout.addWidget(self.fiducialsList.getFiducialsWidget())
     
@@ -51,7 +50,6 @@ class PlaceStylusTipInTheImageStep( USGuidedStep ) :
     self.fiducialsWidget.placeSpatialButton.setVisible(False)
     self.fiducialsWidget.placeFiducialButton.setVisible(True)
     self.fiducialsWidget.fiducialsList.setColumnHidden(2, True)
-    self.fiducialsWidget.fiducialsList.setColumnHidden(3, True)
     self.fiducialsWidget.fiducialsList.setColumnHidden(4, True)
     qt.QTimer.singleShot(0, self.killButton)
     
@@ -79,28 +77,21 @@ class PlaceStylusTipInTheImageStep( USGuidedStep ) :
   def onEntry(self, comingFrom, transitionType):
 
     super(PlaceStylusTipInTheImageStep, self).onEntry(comingFrom, transitionType)
-    
-    self.logic.createRegistrationLists()
-    self.logic.createTargetList()
-    self.logic.createPlusCommandsList()
      
     self.fiducialsList.listenToListModifications()  
     
     #self.logic.crosshairEnable()
     
-    
+    self.fiducialsList.setPlaceImageFiducialStep(True)
     self.updateWidgetFromParameters(self.parameterNode())
     pNode = self.parameterNode()
     pNode.SetParameter('currentStep', self.stepid)
+    if self.fiducialsWidget.fiducialsList.rowCount > 0:
+        item = self.fiducialsWidget.fiducialsList.item(0, 0)
+        self.fiducialsWidget.fiducialsList.itemClicked(item)
     print("We are in the onEntry function of PlaceStylusTipInTheImageStep")
     
-    """  # For debugging
-    import sys
-    sys.path.append('C:/Users/Usuario/devel/eclipse/plugins/org.python.pydev_2.7.1.2012100913/pysrc')
-    
-    import pydevd 
-    pydevd.settrace()
-    """
+
     
     qt.QTimer.singleShot(0, self.killButton)
 
@@ -110,15 +101,80 @@ class PlaceStylusTipInTheImageStep( USGuidedStep ) :
     #crosshairNode=slicer.util.getNode("Crosshair")
     #crosshairNode.SetCrosshairMode(1) 
     #self.logic.crosshairDisable()
+    self.fiducialsList.setPlaceImageFiducialStep(False)
     self.fiducialsList.doNotListenToListModifications()
     print("We are in the onExit function of PlaceStylusTipInTheImageStep")
     
     
   def updateWidgetFromParameters(self, parameterNode):
-    self.fiducialsList.updateFiducialsList()    
+    self.fiducialsList.updateFiducialsList("Tracker Points List")    
     print("We are in the place fiducials step")
 
   def doStepProcessing(self):
     # calculate the transform to align the ROI in the next step with the
     # baseline volume
     pNode = self.parameterNode()
+    self.updateListNodesForRegistration()
+    
+    
+  def updateListNodesForRegistration(self):
+    
+  #raise this flag to ignore change events in the table, the flag is lowered at the end of this method
+    self.updatingList = True
+
+    # get the nodes
+    fiducialListNode=slicer.util.getNode("Fiducials List")
+    trackerListNode=slicer.util.getNode("Tracker Points List")
+
+    fiducialListNodeForRegistration=slicer.util.getNode("Fiducials List (for registration)")
+    trackerListNodeForRegistration=slicer.util.getNode("Tracker Points List (for registration)")
+
+
+    
+    # clear the lists (for registration)
+    fiducialListNodeForRegistration.RemoveChildrenNodes()
+    trackerListNodeForRegistration.RemoveChildrenNodes()
+    
+    saml=slicer.modules.annotations.logic()
+    
+   
+    for row in range(self.fiducialsWidget.fiducialsList.rowCount):
+      fidID = self.fiducialsWidget.fiducialsList.item(row, 2).text()
+      trackerID = self.fiducialsWidget.fiducialsList.item(row, 4).text()
+      #print row
+      #print fidID
+      #print trackerID
+      
+      fidNode = slicer.mrmlScene.GetNodeByID(fidID)
+      trackerNode = slicer.mrmlScene.GetNodeByID(trackerID)
+      #print fidNode
+      #print trackerNode
+      
+      #if the row is selected to be used in the registration
+      if self.fiducialsWidget.fiducialsList.item(row, 0).checkState()==2:
+        #print 'Checked row'
+     
+        fidPos=[0,0,0]
+        dummy=fidNode.GetFiducialCoordinates(fidPos)
+        fidName = fidNode.GetName()
+        trackerPos=[0,0,0]
+        dummy=trackerNode.GetFiducialCoordinates(trackerPos)
+        trackerName = trackerNode.GetName()
+        
+        #create the new nodes copying the data 
+        fidNodeForRegistration=slicer.vtkMRMLAnnotationFiducialNode()
+        fidNodeForRegistration.SetFiducialWorldCoordinates(fidPos)
+        fidNodeForRegistration.SetName(fidName)    
+        trackerNodeForRegistration=slicer.vtkMRMLAnnotationFiducialNode()
+        trackerNodeForRegistration.SetFiducialWorldCoordinates(trackerPos)
+        trackerNodeForRegistration.SetName(trackerName)    
+        
+        # add the nodes to the lists for registration
+        saml.SetActiveHierarchyNodeID(fiducialListNodeForRegistration.GetID())
+        slicer.mrmlScene.AddNode(fidNodeForRegistration)
+        saml.SetActiveHierarchyNodeID(trackerListNodeForRegistration.GetID())
+        slicer.mrmlScene.AddNode(trackerNodeForRegistration)
+     
+     
+    self.logic.hideAllTheFiducialsNode("Fiducials List (for registration)")
+    self.logic.hideAllTheFiducialsNode("Tracker Points List (for registration)")      
