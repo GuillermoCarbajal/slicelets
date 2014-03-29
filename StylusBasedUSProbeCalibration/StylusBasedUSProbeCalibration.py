@@ -395,11 +395,11 @@ class StylusBasedUSProbeCalibrationLogic:
     # referenceToRASNode=slicer.vtkMRMLLinearTransformNode()
     # referenceToRASNode.SetName("ReferenceToRAS")
     # slicer.mrmlScene.AddNode(referenceToRASNode)
-    referenceToRASNode = slicer.util.getNode("ImageToProbe")
+    imageToProbeNode = slicer.util.getNode("ImageToProbe")
     parameters = {}
-    parameters["fixedLandmarks"] = fidPointsNode.GetID()
-    parameters["movingLandmarks"] = spaPointsNode.GetID()
-    parameters["saveTransform"] = referenceToRASNode.GetID()
+    parameters["fixedLandmarks"] = spaPointsNode.GetID()
+    parameters["movingLandmarks"] = fidPointsNode.GetID()
+    parameters["saveTransform"] = imageToProbeNode.GetID()
     parameters["transformType"] = "Similarity"
     fr = slicer.modules.fiducialregistration
     frLogic = fr.cliModuleLogic()
@@ -664,28 +664,13 @@ class StylusBasedUSProbeCalibrationLogic:
       
       # print "Transformation is valid:" + str(validTransformation)  
       return validTransformation
-                 
-                         
+                             
   def onResetView(self):
       print "View should be reset!"  
       # lm=slicer.app.layoutManager()
       # renderer=lm.activeThreeDRenderer()  
-      camera1 = slicer.mrmlScene.GetNodeByID("vtkMRMLCameraNode1")
-      if not camera1 == None:
-         # camera1.Reset(True,True,True,renderer)  
-         glCamera1 = camera1.GetCamera()
-         glCamera1.SetFocalPoint(0, 0, 0)
-         glCamera1.SetPosition(-500, 0, 0)   
-         glCamera1.SetViewAngle(30)
-         glCamera1.SetViewUp(0, 0, 1)
-      camera2 = slicer.mrmlScene.GetNodeByID("vtkMRMLCameraNode2")
-      if not camera2 == None:
-         # camera2.Reset(True,True,True,renderer)  
-         glCamera2 = camera2.GetCamera()
-         glCamera2.SetFocalPoint(0, 0, 0)
-         glCamera2.SetPosition(0, 500, 0)   
-         glCamera2.SetViewAngle(30)   
-         glCamera2.SetViewUp(0, 0, 1)       
+      slicer.util.resetSliceViews() 
+      slicer.util.resetThreeDViews()  
          
            
 class StylusBasedUSProbeCalibrationTest(unittest.TestCase):
