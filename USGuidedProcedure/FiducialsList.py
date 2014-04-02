@@ -74,7 +74,8 @@ class FiducialsList():
         self.logic=logic
         
     def onPlaceFiducialButtomClicked(self):   
-        self.logic.addFiducialToList("Fiducials List")  
+        self.logic.addFiducialToList("Fiducials List") 
+        qt.QApplication.setOverrideCursor(self.placeFiducialCursor)  
 
     def onRemoveFiducialButtonClicked(self):   
           

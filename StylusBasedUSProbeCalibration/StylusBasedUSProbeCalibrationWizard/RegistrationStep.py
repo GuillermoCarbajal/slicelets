@@ -69,3 +69,10 @@ class RegistrationStep( USGuidedStep ) :
 
   def onRegistrationButtonClicked(self):
     self.logic.register()
+    redNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
+    imageToProbeNode=slicer.util.getNode("ImageToProbe")
+    imageNode=slicer.util.getNode("Image_Image")
+    imageNode.SetAndObserveTransformNodeID(imageToProbeNode.GetID()) 
+    self.logic.vrdl.SetDriverForSlice(imageToProbeNode.GetID(), redNode)
+    slicer.util.resetThreeDViews()
+    slicer.util.resetSliceViews()

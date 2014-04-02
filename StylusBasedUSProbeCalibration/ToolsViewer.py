@@ -63,11 +63,11 @@ class ToolsViewer():
     def startListeningToTransformationsModifications(self):    
         print "Tools viewer is listening to the scene"
        
-        probeToTracker = slicer.util.getNode("ProbeToTracker")
-        probeToTracker.RemoveAllObservers()
+        trackerToProbe = slicer.util.getNode("TrackerToProbe")
+        trackerToProbe.RemoveAllObservers()
         #if probeToReference is not None:
         #    self.onProbeTransformationModified()
-        probeToTracker.AddObserver('ModifiedEvent', self.onProbeTransformationModified)
+        trackerToProbe.AddObserver('ModifiedEvent', self.onProbeTransformationModified)
        
         stylusTipToTracker = slicer.util.getNode("StylusTipToTracker")
         stylusTipToTracker.RemoveAllObservers()
@@ -82,7 +82,7 @@ class ToolsViewer():
         
     
     def onProbeTransformationModified(self, caller,  event):
-        if self.logic.isValidTransformation("ProbeToTracker"):
+        if self.logic.isValidTransformation("TrackerToProbe"):
           self.probeSemaphore.setStyleSheet(self.visibleStyle) 
           #print "Probe Transformation is valid!!"
         else:

@@ -218,17 +218,23 @@ class StylusBasedUSProbeCalibrationLogic:
   def associateTransformations(self):
 
     # # The nodes StylusTipToReference and ProbeToReference are added 
-    stylusTipToReferenceNode = slicer.util.getNode("StylusTipToTracker")
-    if stylusTipToReferenceNode == None:
-      stylusTipToReferenceNode = slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(stylusTipToReferenceNode)
-      stylusTipToReferenceNode.SetName("StylusTipToTracker")
+    stylusTipToTrackerNode = slicer.util.getNode("StylusTipToTracker")
+    if stylusTipToTrackerNode == None:
+      stylusTipToTrackerNode = slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(stylusTipToTrackerNode)
+      stylusTipToTrackerNode.SetName("StylusTipToTracker")
     
-    probeToReferenceNode = slicer.util.getNode("ProbeToTracker")
-    if probeToReferenceNode == None:
-      probeToReferenceNode = slicer.vtkMRMLLinearTransformNode()
-      slicer.mrmlScene.AddNode(probeToReferenceNode)
-      probeToReferenceNode.SetName("ProbeToTracker")
+#     probeToTrackerNode = slicer.util.getNode("ProbeToTracker")
+#     if probeToTrackerNode == None:
+#       probeToTrackerNode = slicer.vtkMRMLLinearTransformNode()
+#       slicer.mrmlScene.AddNode(probeToTrackerNode)
+#       probeToTrackerNode.SetName("ProbeToTracker")
+      
+    trackerToProbeNode = slicer.util.getNode("TrackerToProbe")
+    if trackerToProbeNode == None:
+      trackerToProbeNode = slicer.vtkMRMLLinearTransformNode()
+      slicer.mrmlScene.AddNode(trackerToProbeNode)
+      trackerToProbeNode.SetName("TrackerToProbe")  
       
     stylusTipToProbeNode = slicer.util.getNode("StylusTipToProbe")
     if stylusTipToProbeNode == None:
@@ -240,7 +246,7 @@ class StylusBasedUSProbeCalibrationLogic:
     if imageToProbeNode == None:
       imageToProbeNode = slicer.vtkMRMLLinearTransformNode()
       slicer.mrmlScene.AddNode(imageToProbeNode)
-      stylusTipToProbeNode.SetName("ImageToProbe")   
+      imageToProbeNode.SetName("ImageToProbe")   
       
     #imageNode = slicer.util.getNode("Image_Image")          
       
@@ -249,7 +255,8 @@ class StylusBasedUSProbeCalibrationLogic:
          
     # imageReferenceNode=slicer.util.getNode("Image_Reference")
     #imageNode.SetAndObserveTransformNodeID(imageToProbeNode.GetID()) 
-    stylusTipToProbeNode.SetAndObserveTransformNodeID(probeToReferenceNode.GetID())   
+#     stylusTipToProbeNode.SetAndObserveTransformNodeID(probeToTrackerNode.GetID())   
+    stylusTipToTrackerNode.SetAndObserveTransformNodeID(trackerToProbeNode.GetID()) 
      
     self.stylusModelNode = slicer.util.getNode("Stylus_Example")    
     if self.stylusModelNode == None:    
@@ -275,7 +282,7 @@ class StylusBasedUSProbeCalibrationLogic:
     matrix = vtk.vtkMatrix4x4()
     matrix.SetElement(0, 3, -210)
     stylusTipModelToStylusTipTransform.SetAndObserveMatrixTransformToParent(matrix)
-    stylusTipModelToStylusTipTransform.SetAndObserveTransformNodeID(stylusTipToReferenceNode.GetID())
+    stylusTipModelToStylusTipTransform.SetAndObserveTransformNodeID(stylusTipToTrackerNode.GetID())
     
     self.stylusModelNode.SetAndObserveTransformNodeID(stylusTipModelToStylusTipTransform.GetID())
     
