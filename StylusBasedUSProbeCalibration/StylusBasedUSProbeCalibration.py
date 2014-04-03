@@ -471,7 +471,8 @@ class StylusBasedUSProbeCalibrationLogic:
     image_Reference = slicer.util.getNode("Image_Image")   
     if image_Reference is not None: 
       self.doNotListenToImageSentToTheScene()
-      self.showRedSliceIn3D(True)      
+      self.showRedSliceIn3D(False) 
+      slicer.util.resetSliceViews()       
 
     
   def disconnectDriverForSlice(self):
@@ -627,6 +628,8 @@ class StylusBasedUSProbeCalibrationLogic:
       fidNode.SetFiducialWorldCoordinates(fidPos)
       fidNode.SetName(fidName + '-Tracker')   
       self.takeUSSnapshot2(fidName + '-Snapshot')
+      snapshotNode=slicer.util.getNode(fidName + '-Snapshot')
+      snapshotNode.SetDisplayVisibility(False)
       print("Tracker position recorded")   
     else:
       print("Tracker position is invalid")  

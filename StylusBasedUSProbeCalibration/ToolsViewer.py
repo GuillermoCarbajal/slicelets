@@ -110,6 +110,6 @@ class ToolsViewer():
         self.doNotListenToTransformationsSentToTheScene() 
         self.logic.associateTransformations()  
         self.startListeningToTransformationsModifications()
-        slicer.util.resetSliceViews() 
-        slicer.util.resetThreeDViews()      
+        slicer.util.resetThreeDViews()
+        slicer.util.resetSliceViews()       
         

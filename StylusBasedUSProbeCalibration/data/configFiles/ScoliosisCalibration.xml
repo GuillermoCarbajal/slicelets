@@ -89,11 +89,10 @@
       <TransformNames>
         <Transform Name="StylusTipToProbe" />
 		<Transform Name="StylusTipToTracker" />
-		<Transform Name="ProbeToTracker" />
+		<Transform Name="TrackerToProbe" />
       </TransformNames>
       <ImageNames>
         <Image Name="Image" EmbeddedTransformToFrame="Image" />
-		<Image Name="Image" EmbeddedTransformToFrame="Tracker" />
       </ImageNames>
     </DefaultClientInfo>
   </PlusOpenIGTLinkServer>
