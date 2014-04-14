@@ -236,6 +236,7 @@ class NavigationStep( USGuidedStep ) :
          self.logic.startVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode,self.outputVolFilename,self.outputVolDeviceName)
          print("volume reconstruction started!")
          self.startReconstructionButton.setText("Stop")
+         self.suspendReconstructionButton.setText("Suspend")
          self.suspendReconstructionButton.setEnabled(True)
          self.reconstructionSuspended = False
          self.logic.setActiveAnnotationsList("Plus Commands List")
