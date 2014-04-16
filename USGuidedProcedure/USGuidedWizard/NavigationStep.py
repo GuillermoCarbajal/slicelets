@@ -223,8 +223,8 @@ class NavigationStep( USGuidedStep ) :
           print "GOT VOLUME RECONSTRUCTION SNAPSHOT!"
           self.logic.setActiveAnnotationsList("Plus Commands List")
           self.lastVolumeReconstructionCommandId = self.commandId
-          self.commandId= self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
-          self.listenToPlusServerStopAcquisitionReply()
+          #self.commandId= self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+          #self.listenToPlusServerStopAcquisitionReply()
         #node=getNode("*"+self.leftSideAcquisitionFilename)
       
                
@@ -240,7 +240,7 @@ class NavigationStep( USGuidedStep ) :
          self.suspendReconstructionButton.setEnabled(True)
          self.reconstructionSuspended = False
          self.logic.setActiveAnnotationsList("Plus Commands List")
-         self.commandId= self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+         #self.commandId= self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
          self.listenToVolumesAdded()
          self.numberOfGeneratedVolumes+=1
          self.pbarwin.show()
@@ -291,6 +291,8 @@ class NavigationStep( USGuidedStep ) :
       if self.reconstructionSuspended == True:
          self.logic.suspendVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
          self.suspendReconstructionButton.setText("Resume")
+         self.commandId= self.logic.getVolumeReconstructionSnapshot(self.igtlRemoteLogic, self.igtlConnectorNode)
+         self.listenToPlusServerStopAcquisitionReply()
       else:
          self.logic.resumeVolumeReconstruction(self.igtlRemoteLogic, self.igtlConnectorNode)
          self.suspendReconstructionButton.setText("Suspend") 
